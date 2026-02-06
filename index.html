@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Gestor de Gastos</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root { --vh: 1vh; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+
+    .bg-gradient { background: linear-gradient(135deg, #EFF6FF 0%, #E0E7FF 100%); min-height: calc(var(--vh) * 100); padding: 1rem; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1rem; }
+    .header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
+    .header-title { display: flex; align-items: center; gap: 1rem; }
+    .icon-box { background: #4F46E5; padding: 0.75rem; border-radius: 0.75rem; color: white; }
+    .title { font-size: 1.5rem; font-weight: bold; color: #1F2937; }
+    .subtitle { font-size: 0.875rem; color: #6B7280; }
+    .sync-badge { font-size: 0.75rem; color: #16A34A; display: inline-flex; align-items: center; gap: 0.25rem; margin-left: .5rem; }
+    .date-selector { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+    .select, .input { padding: 0.5rem 1rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; }
+    .input-sm { width: 5rem; }
+
+    .grid { display: grid; gap: 1rem; }
+    @media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .section-title { font-size: 1.125rem; font-weight: bold; color: #1F2937; margin-bottom: 1rem; }
+    .green-box { background: #F0FDF4; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+    .purple-box { background: #FAF5FF; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 2px solid #E9D5FF; }
+
+    .label { display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
+    .input-full { width: 100%; padding: 0.5rem 1rem; border: 2px solid #86EFAC; border-radius: 0.5rem; font-size: 1.125rem; font-weight: bold; }
+    .input-purple { width: 100%; padding: 0.5rem 1rem; border: 2px solid #C084FC; border-radius: 0.5rem; font-size: 1.125rem; font-weight: bold; }
+
+    .gasto-list { max-height: 24rem; overflow-y: auto; margin-bottom: 1rem; -webkit-overflow-scrolling: touch; }
+    .gasto-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 0.5rem; }
+    .gasto-item:hover { background: #F9FAFB; }
+    .gasto-item.pagado { background: #F0FDF4; }
+
+    .checkbox { width: 1.25rem; height: 1.25rem; cursor: pointer; }
+    .gasto-text { flex: 1; font-size: 0.875rem; color: #374151; }
+    .gasto-text.pagado { text-decoration: line-through; color: #9CA3AF; }
+    .gasto-amount { font-weight: 600; font-size: 0.875rem; color: #1F2937; white-space: nowrap; }
+    .gasto-amount.pagado { color: #16A34A; }
+
+    .btn-icon { padding: 0.25rem; cursor: pointer; border: none; background: transparent; border-radius: 0.25rem; }
+    .btn-icon:hover { background: #F3F4F6; }
+
+    .btn { width: 100%; padding: 0.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-small { padding: 0.5rem 1rem; width: auto; font-size: 0.875rem; }
+    .btn-add { background: #E0E7FF; color: #4F46E5; }
+    .btn-add:hover { background: #C7D2FE; }
+    .btn-primary { background: #4F46E5; color: white; }
+    .btn-primary:hover { background: #4338CA; }
+    .btn-secondary { background: #E5E7EB; color: #374151; }
+    .btn-secondary:hover { background: #D1D5DB; }
+
+    .summary { border-top: 2px solid #E5E7EB; padding-top: 1rem; margin-top: 1.5rem; }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .summary-label { color: #374151; font-weight: bold; }
+    .summary-value { font-weight: bold; }
+    .text-red { color: #DC2626; }
+    .text-green { color: #16A34A; }
+
+    .alert { padding: 1rem; border-radius: 0.5rem; border: 2px solid; margin-bottom: 1.5rem; }
+    .alert-green { background: #F0FDF4; border-color: #86EFAC; }
+    .alert-orange { background: #FFF7ED; border-color: #FED7AA; }
+    .alert-red { background: #FEF2F2; border-color: #FCA5A5; }
+    .alert-content { display: flex; gap: 0.75rem; }
+    .alert-icon { padding: 0.5rem; border-radius: 9999px; font-size: 1.25rem; flex-shrink: 0; }
+    .alert-icon.green { background: #BBF7D0; }
+    .alert-icon.orange { background: #FED7AA; }
+    .alert-icon.red { background: #FCA5A5; }
+    .alert-title { font-weight: bold; margin-bottom: 0.5rem; }
+    .text-sm { font-size: 0.75rem; }
+
+    .progress-bar { width: 100%; background: #E5E7EB; border-radius: 9999px; height: 1.25rem; overflow: hidden; margin-bottom: 1.5rem; }
+    .progress-fill { height: 100%; transition: width 0.5s; }
+    .bg-green-500 { background: #22C55E; }
+    .bg-orange-500 { background: #F97316; }
+    .bg-red-500 { background: #EF4444; }
+
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    .stat-box { padding: 0.75rem; border-radius: 0.5rem; }
+    .stat-box.blue { background: #EFF6FF; }
+    .stat-box.red { background: #FEF2F2; }
+    .stat-box.green { background: #F0FDF4; }
+    .stat-box.full { grid-column: span 2; }
+    .stat-label { font-size: 0.75rem; color: #6B7280; margin-bottom: 0.25rem; }
+    .stat-value { font-size: 1.5rem; font-weight: bold; }
+
+    .form-box { background: #EEF2FF; padding: 1rem; border-radius: 0.5rem; }
+    .form-title { font-weight: 600; color: #312E81; margin-bottom: 0.75rem; }
+    .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .input-form { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 0.5rem; font-weight: 600; color: #374151; font-size: 0.875rem; border-bottom: 2px solid #E5E7EB; }
+    td { padding: 0.5rem; font-size: 0.875rem; border-bottom: 1px solid #F3F4F6; }
+    tr:hover { background: #F9FAFB; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+
+    .empty-state { text-align: center; color: #6B7280; padding: 2rem; }
+    .loading { text-align: center; padding: 2rem; color: #6B7280; }
+
+    /* Modal estable en móvil */
+    .modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 1rem;
+      height: calc(var(--vh) * 100);
+      overscroll-behavior: contain;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-title { font-size: 1.25rem; font-weight: bold; color: #1F2937; }
+    .btn-close { background: #F3F4F6; border: none; border-radius: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 1.25rem; }
+    .btn-close:hover { background: #E5E7EB; }
+
+    @media (max-width: 768px) {
+      .modal { align-items: flex-start; padding-top: 2rem; }
+    }
+
+    .historico-item { padding: 1rem; border: 2px solid #E5E7EB; border-radius: 0.5rem; margin-bottom: 0.75rem; cursor: pointer; }
+    .historico-item:hover { border-color: #C7D2FE; background: #F9FAFB; }
+    .historico-mes { font-weight: bold; color: #1F2937; margin-bottom: 0.5rem; }
+    .historico-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.875rem; }
+
+    /* Caja de error visible si algo peta */
+    .fatal-error {
+      background: #111827;
+      color: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+    <script type="text/babel">
+    // 1) Fix vh para móvil (evita temblores por barra/teclado)
+    function setVh() {
+      document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    }
+    window.addEventListener('resize', setVh);
+    setVh();
+
+    // 2) Captura de errores global: si algo peta, lo verás en pantalla
+    function showFatalError(err) {
+      var root = document.getElementById('root');
+      if (!root) return;
+      root.innerHTML =
+        '<div class="bg-gradient"><div class="container"><div class="card">' +
+        '<div style="font-weight:800;margin-bottom:8px;">⚠️ Error en la app</div>' +
+        '<div class="fatal-error">' + (err && err.stack ? err.stack : String(err)) + '</div>' +
+        '</div></div></div>';
+    }
+
+    window.onerror = function (msg, url, line, col, error) {
+      showFatalError(error || (msg + ' @ ' + url + ':' + line + ':' + col));
+    };
+    window.onunhandledrejection = function (e) {
+      showFatalError(e && e.reason ? e.reason : e);
+    };
+
+    try {
+      // Firebase config
+      var firebaseConfig = {
+        apiKey: "AIzaSyB3kiy6fyLoAgCEH0Kw7K_iQt8YkebY9UY",
+        authDomain: "gastos-familia-marce.firebaseapp.com",
+        projectId: "gastos-familia-marce",
+        storageBucket: "gastos-familia-marce.firebasestorage.app",
+        messagingSenderId: "117082983018",
+        appId: "1:117082983018:web:59a5bfd4a3e015d7251813"
+      };
+
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      var db = firebase.firestore();
+
+      var useState = React.useState;
+      var useEffect = React.useEffect;
+
+      function App() {
+        var _a = useState(3350), ingresos = _a[0], setIngresos = _a[1];
+        var _b = useState(0), saldoAhorro = _b[0], setSaldoAhorro = _b[1];
+        var _c = useState([
+          { id: 1, categoria: 'Alquiler', presupuesto: 950, pagado: false },
+          { id: 2, categoria: 'Coche', presupuesto: 400, pagado: false },
+          { id: 3, categoria: 'Guardería', presupuesto: 340, pagado: false },
+          { id: 4, categoria: 'Teléfono', presupuesto: 39.10, pagado: false },
+          { id: 5, categoria: 'Luz', presupuesto: 42, pagado: false },
+          { id: 6, categoria: 'Parking', presupuesto: 121, pagado: false },
+          { id: 7, categoria: 'Gas', presupuesto: 40, pagado: false },
+          { id: 8, categoria: 'Tarjeta cumple Bruno', presupuesto: 50, pagado: false },
+          { id: 9, categoria: 'Agua', presupuesto: 100, pagado: false },
+          { id: 10, categoria: 'Ahorro', presupuesto: 250, pagado: false }
+        ]), gastosFijos = _c[0], setGastosFijos = _c[1];
+
+        var _d = useState([]), gastosVariables = _d[0], setGastosVariables = _d[1];
+        var _e = useState(new Date().getMonth()), mesActual = _e[0], setMesActual = _e[1];
+        var _f = useState(new Date().getFullYear()), añoActual = _f[0], setAñoActual = _f[1];
+        var _g = useState(null), editingFijo = _g[0], setEditingFijo = _g[1];
+        var _h = useState({ fecha: '', monto: '', descripcion: '' }), nuevoGasto = _h[0], setNuevoGasto = _h[1];
+        var _i = useState(false), mostrarHistorico = _i[0], setMostrarHistorico = _i[1];
+        var _j = useState({}), historico = _j[0], setHistorico = _j[1];
+        var _k = useState(true), loading = _k[0], setLoading = _k[1];
+        var _l = useState(false), synced = _l[0], setSynced = _l[1];
+
+        var mesKey = añoActual + "-" + mesActual;
+
+        // Bloqueo scroll body cuando modal abierto
+        useEffect(function () {
+          document.body.style.overflow = mostrarHistorico ? 'hidden' : 'auto';
+        }, [mostrarHistorico]);
+
+        // Cargar datos Firestore
+        useEffect(function () {
+          var unsub = db.collection('gastos').doc('data').onSnapshot(function (doc) {
+            if (doc.exists) {
+              var data = doc.data() || {};
+
+              setIngresos(typeof data.ingresos === 'number' ? data.ingresos : 3350);
+              setSaldoAhorro(typeof data.saldoAhorro === 'number' ? data.saldoAhorro : 0);
+
+              if (Array.isArray(data.gastosFijos)) setGastosFijos(data.gastosFijos);
+              if (data.historico && typeof data.historico === 'object') setHistorico(data.historico);
+              else setHistorico({});
+
+              // Cargar gastosVariables del mes
+              var h = data.historico && data.historico[mesKey] ? data.historico[mesKey] : null;
+              if (h && Array.isArray(h.gastosVariables)) setGastosVariables(h.gastosVariables);
+              else setGastosVariables([]);
+            } else {
+              // si no existe el doc aún
+              setHistorico({});
+              setGastosVariables([]);
+            }
+
+            setLoading(false);
+            setSynced(true);
+            setTimeout(function () { setSynced(false); }, 1500);
+          }, function (error) {
+            // error lectura
+            showFatalError(error);
+          });
+
+          return function () { unsub(); };
+        }, [mesKey]);
+
+        // Guardar en Firestore
+        useEffect(function () {
+          if (loading) return;
+
+          var totalFijos = gastosFijos.reduce(function (sum, g) { return sum + (Number(g.presupuesto) || 0); }, 0);
+          var totalVars = gastosVariables.reduce(function (sum, g) { return sum + (Number(g.monto) || 0); }, 0);
+
+          var nuevoHistorico = Object.assign({}, historico);
+          nuevoHistorico[mesKey] = {
+            gastosVariables: gastosVariables,
+            ingresos: ingresos,
+            gastosFijos: gastosFijos.map(function (g) { return Object.assign({}, g); }),
+            totalGastosFijos: totalFijos,
+            totalGastosVariables: totalVars
+          };
+
+          db.collection('gastos').doc('data').set({
+            ingresos: ingresos,
+            gastosFijos: gastosFijos,
+            saldoAhorro: saldoAhorro,
+            historico: nuevoHistorico,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(function () {
+            setSynced(true);
+            setTimeout(function () { setSynced(false); }, 1500);
+          }).catch(function (e) {
+            showFatalError(e);
+          });
+
+          setHistorico(nuevoHistorico);
+        }, [ingresos, gastosFijos, gastosVariables, saldoAhorro, mesKey]);
+
+        // Cálculos
+        var totalGastosFijos = gastosFijos.reduce(function (sum, g) { return sum + (Number(g.presupuesto) || 0); }, 0);
+        var totalGastosFijosPagados = gastosFijos.filter(function (g) { return g.pagado; }).reduce(function (sum, g) { return sum + (Number(g.presupuesto) || 0); }, 0);
+        var totalGastosFijosPendientes = gastosFijos.filter(function (g) { return !g.pagado; }).reduce(function (sum, g) { return sum + (Number(g.presupuesto) || 0); }, 0);
+
+        var resto = ingresos - totalGastosFijos;
+        var diasMes = new Date(añoActual, mesActual + 1, 0).getDate();
+        var totalGastosVariables = gastosVariables.reduce(function (sum, g) { return sum + (Number(g.monto) || 0); }, 0);
+        var presupuestoRestante = resto - totalGastosVariables;
+
+        var hoy = new Date();
+        var diaActual = hoy.getDate();
+        var diasRestantes = diasMes - diaActual;
+        var gastoPromedioDiario = diaActual > 0 ? (totalGastosVariables / diaActual) : 0;
+        var proyeccionFinMes = totalGastosVariables + (gastoPromedioDiario * diasRestantes);
+        var diferenciaPrevista = resto - proyeccionFinMes;
+
+        var estadoProyeccion = 'bien';
+        if (diferenciaPrevista < 0 && diferenciaPrevista >= -100) estadoProyeccion = 'ajustado';
+        if (diferenciaPrevista < -100) estadoProyeccion = 'peligro';
+
+        var porcentajeGastado = resto > 0 ? (totalGastosVariables / resto) * 100 : 0;
+
+        var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+        function cargarMesHistorico(key) {
+          var parts = key.split('-');
+          var año = parseInt(parts[0], 10);
+          var mes = parseInt(parts[1], 10);
+          setAñoActual(año);
+          setMesActual(mes);
+          setMostrarHistorico(false);
+        }
+
+        var historicoOrdenado = Object.keys(historico).sort().reverse();
+
+        if (loading) {
+          return (
+            <div className="bg-gradient">
+              <div className="container">
+                <div className="loading">
+                  <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>💰</div>
+                  <div>Cargando datos...</div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="bg-gradient">
+            <div className="container">
+              <div className="card">
+                <div className="header">
+                  <div className="header-title">
+                    <div className="icon-box">💰</div>
+                    <div>
+                      <div className="title">Gestor de Gastos</div>
+                      <div className="subtitle">
+                        Control mensual compartido
+                        {synced ? <span className="sync-badge">✓ Sincronizado</span> : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="date-selector">
+                    <button className="btn btn-small btn-secondary" onClick={function(){ setMostrarHistorico(true); }}>
+                      📊 Histórico
+                    </button>
+                    <select className="select" value={mesActual} onChange={function(e){ setMesActual(parseInt(e.target.value,10)); }}>
+                      {meses.map(function(m, i){ return <option key={i} value={i}>{m}</option>; })}
+                    </select>
+                    <input className="select input-sm" type="number" value={añoActual} onChange={function(e){ setAñoActual(parseInt(e.target.value,10)); }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid">
+                {/* COLUMNA IZQUIERDA */}
+                <div className="card">
+                  <div className="section-title">Estado del Presupuesto</div>
+
+                  <div className={"alert " + (estadoProyeccion === 'bien' ? 'alert-green' : (estadoProyeccion === 'ajustado' ? 'alert-orange' : 'alert-red'))}>
+                    <div className="alert-content">
+                      <div className={"alert-icon " + (estadoProyeccion === 'bien' ? 'green' : (estadoProyeccion === 'ajustado' ? 'orange' : 'red'))}>
+                        {estadoProyeccion === 'bien' ? '✓' : '⚠'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div className="alert-title text-sm">
+                          {estadoProyeccion === 'bien' ? '¡Vas genial!' : (estadoProyeccion === 'ajustado' ? 'Vas un poco justo' : '¡Cuidado! Te vas a pasar')}
+                        </div>
+                        <div className="text-sm">
+                          <div><strong>Días restantes:</strong> {diasRestantes} días</div>
+                          <div><strong>Gasto promedio:</strong> {gastoPromedioDiario.toFixed(2)} €/día</div>
+                          <div><strong>Proyección:</strong> {proyeccionFinMes.toFixed(2)} €</div>
+                          <div style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>
+                            {diferenciaPrevista >= 0
+                              ? ("Te sobrarán " + diferenciaPrevista.toFixed(2) + " €")
+                              : ("Te faltarán " + Math.abs(diferenciaPrevista).toFixed(2) + " €")}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: '600' }}>Gastado</span>
+                      <span style={{ fontWeight: 'bold', color: '#4F46E5' }}>{porcentajeGastado.toFixed(1)}%</span>
+                    </div>
+                    <div className="progress-bar">
+                      <div
+                        className={"progress-fill " + (porcentajeGastado > 90 ? 'bg-red-500' : (porcentajeGastado > 70 ? 'bg-orange-500' : 'bg-green-500'))}
+                        style={{ width: (Math.min(porcentajeGastado, 100)) + '%' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="stats">
+                    <div className="stat-box blue">
+                      <div className="stat-label">Presupuesto</div>
+                      <div className="stat-value" style={{ color: '#2563EB' }}>{resto.toFixed(2)} €</div>
+                    </div>
+                    <div className="stat-box red">
+                      <div className="stat-label">Gastado</div>
+                      <div className="stat-value text-red">{totalGastosVariables.toFixed(2)} €</div>
+                    </div>
+                    <div className="stat-box green full">
+                      <div className="stat-label">Restante</div>
+                      <div className="stat-value text-green" style={{ fontSize: '2rem' }}>{presupuestoRestante.toFixed(2)} €</div>
+                    </div>
+                  </div>
+
+                  <div className="form-box">
+                    <div className="form-title">Añadir Gasto</div>
+                    <div className="input-group">
+                      <input className="input-form" type="date" value={nuevoGasto.fecha}
+                        onChange={function(e){ setNuevoGasto(Object.assign({}, nuevoGasto, { fecha: e.target.value })); }} />
+                      <input className="input-form" type="number" placeholder="Importe (€)" value={nuevoGasto.monto}
+                        onChange={function(e){ setNuevoGasto(Object.assign({}, nuevoGasto, { monto: e.target.value })); }} step="0.01" />
+                      <input className="input-form" type="text" placeholder="Descripción" value={nuevoGasto.descripcion}
+                        onChange={function(e){ setNuevoGasto(Object.assign({}, nuevoGasto, { descripcion: e.target.value })); }} />
+                      <button className="btn btn-primary" onClick={function(){
+                        if (nuevoGasto.fecha && nuevoGasto.monto) {
+                          setGastosVariables([].concat(gastosVariables, [{
+                            id: Date.now(),
+                            fecha: nuevoGasto.fecha,
+                            monto: parseFloat(nuevoGasto.monto),
+                            descripcion: nuevoGasto.descripcion || ''
+                          }]));
+                          setNuevoGasto({ fecha: '', monto: '', descripcion: '' });
+                        }
+                      }}>
+                        + Añadir Gasto
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COLUMNA DERECHA */}
+                <div className="card">
+                  <div className="section-title">Ingresos y Gastos Fijos</div>
+
+                  <div className="green-box">
+                    <label className="label">Ingresos Mensuales</label>
+                    <input className="input-full" type="number" value={ingresos}
+                      onChange={function(e){ setIngresos(parseFloat(e.target.value) || 0); }} step="0.01" />
+                  </div>
+
+                  <div className="purple-box">
+                    <label className="label">💰 Saldo Total en Cuenta de Ahorro</label>
+                    <input className="input-purple" type="number" value={saldoAhorro}
+                      onChange={function(e){ setSaldoAhorro(parseFloat(e.target.value) || 0); }} step="0.01" />
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6B7280' }}>
+                      Este es tu saldo acumulado total en la cuenta de ahorro
+                    </div>
+                  </div>
+
+                  <div className="gasto-list">
+                    {gastosFijos.map(function(g){
+                      return (
+                        <div key={g.id} className={"gasto-item " + (g.pagado ? 'pagado' : '')}>
+                          <input className="checkbox" type="checkbox" checked={!!g.pagado}
+                            onChange={function(){
+                              setGastosFijos(gastosFijos.map(function(x){
+                                return x.id === g.id ? Object.assign({}, x, { pagado: !x.pagado }) : x;
+                              }));
+                            }} />
+
+                          {editingFijo === g.id ? (
+                            <>
+                              <input className="input" style={{ flex: 1 }} value={g.categoria}
+                                onChange={function(e){
+                                  setGastosFijos(gastosFijos.map(function(x){
+                                    return x.id === g.id ? Object.assign({}, x, { categoria: e.target.value }) : x;
+                                  }));
+                                }} />
+                              <input className="input" style={{ width: '5rem' }} type="number" value={g.presupuesto}
+                                onChange={function(e){
+                                  setGastosFijos(gastosFijos.map(function(x){
+                                    return x.id === g.id ? Object.assign({}, x, { presupuesto: parseFloat(e.target.value) || 0 }) : x;
+                                  }));
+                                }} step="0.01" />
+                              <button className="btn-icon" onClick={function(){ setEditingFijo(null); }}>✓</button>
+                            </>
+                          ) : (
+                            <>
+                              <span className={"gasto-text " + (g.pagado ? 'pagado' : '')}>{g.categoria}</span>
+                              <span className={"gasto-amount " + (g.pagado ? 'pagado' : '')}>{Number(g.presupuesto || 0).toFixed(2)} €</span>
+                              <button className="btn-icon" onClick={function(){ setEditingFijo(g.id); }}>✎</button>
+                              <button className="btn-icon" onClick={function(){
+                                setGastosFijos(gastosFijos.filter(function(x){ return x.id !== g.id; }));
+                              }}>🗑</button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button className="btn btn-add" onClick={function(){
+                    var maxId = 0;
+                    gastosFijos.forEach(function(g){ if (g.id > maxId) maxId = g.id; });
+                    var newId = maxId + 1;
+                    setGastosFijos([].concat(gastosFijos, [{ id: newId, categoria: 'Nuevo gasto', presupuesto: 0, pagado: false }]));
+                    setEditingFijo(newId);
+                  }}>
+                    + Añadir Gasto Fijo
+                  </button>
+
+                  <div className="summary">
+                    <div className="summary-row">
+                      <span className="summary-label">Total gastos fijos</span>
+                      <span className="summary-value">{totalGastosFijos.toFixed(2)} €</span>
+                    </div>
+                    <div className="summary-row">
+                      <span className="summary-label text-green">Pagado</span>
+                      <span className="summary-value text-green">{totalGastosFijosPagados.toFixed(2)} €</span>
+                    </div>
+                    <div className="summary-row">
+                      <span className="summary-label text-red">Pendiente</span>
+                      <span className="summary-value text-red">{totalGastosFijosPendientes.toFixed(2)} €</span>
+                    </div>
+                  </div>
+
+                  <div className="section-title" style={{ marginTop: '1rem' }}>Gastos Variables</div>
+
+                  {gastosVariables.length === 0 ? (
+                    <div className="empty-state">No hay gastos variables este mes</div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Descripción</th>
+                          <th className="text-right">Monto</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gastosVariables.map(function(g){
+                          return (
+                            <tr key={g.id}>
+                              <td>{g.fecha}</td>
+                              <td>{g.descripcion || '—'}</td>
+                              <td className="text-right">{Number(g.monto || 0).toFixed(2)} €</td>
+                              <td className="text-center">
+                                <button className="btn-icon" onClick={function(){
+                                  setGastosVariables(gastosVariables.filter(function(x){ return x.id !== g.id; }));
+                                }}>🗑</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+
+              {/* MODAL HISTÓRICO */}
+              {mostrarHistorico ? (
+                <div className="modal" onClick={function(){ setMostrarHistorico(false); }}>
+                  <div className="modal-content" onClick={function(e){ e.stopPropagation(); }}>
+                    <div className="modal-header">
+                      <div className="modal-title">📊 Histórico de Gastos</div>
+                      <button className="btn-close" onClick={function(){ setMostrarHistorico(false); }}>×</button>
+                    </div>
+
+                    {historicoOrdenado.length === 0 ? (
+                      <div className="empty-state">No hay datos históricos</div>
+                    ) : (
+                      <div>
+                        {historicoOrdenado.map(function(key){
+                          var parts = key.split('-');
+                          var año = parseInt(parts[0], 10);
+                          var mes = parseInt(parts[1], 10);
+                          var datos = historico[key] || {};
+                          var mesNombre = meses[mes] || key;
+
+                          var tf = Number(datos.totalGastosFijos || 0);
+                          var tv = Number(datos.totalGastosVariables || 0);
+                          var ing = Number(datos.ingresos || 0);
+
+                          var totalGastado = tf + tv;
+                          var sobrante = ing - totalGastado;
+
+                          return (
+                            <div key={key} className="historico-item" onClick={function(){ cargarMesHistorico(key); }}>
+                              <div className="historico-mes">{mesNombre} {año}</div>
+                              <div className="historico-stats">
+                                <div><span style={{ color: '#6B7280' }}>Ingresos:</span> <strong>{ing.toFixed(2)} €</strong></div>
+                                <div><span style={{ color: '#6B7280' }}>G. Fijos:</span> <strong style={{ color: '#DC2626' }}>{tf.toFixed(2)} €</strong></div>
+                                <div><span style={{ color: '#6B7280' }}>G. Variables:</span> <strong style={{ color: '#DC2626' }}>{tv.toFixed(2)} €</strong></div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <span style={{ color: '#6B7280' }}>Balance:</span>{' '}
+                                  <strong style={{ color: sobrante >= 0 ? '#16A34A' : '#DC2626' }}>
+                                    {sobrante.toFixed(2)} €
+                                  </strong>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      }
+
+      // Render React 18
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+    } catch (e) {
+      showFatalError(e);
+    }
+  </script>
+</body>
+</html>
