@@ -379,3 +379,27 @@
                                     const newId = Math.max(...gastosFijos.map(g => g.id), 0) + 1;
                                     setGastosFijos([...gastosFijos, {id: newId, categoria: 'Nuevo gasto', presupuesto: 0, pagado: false}]);
                                     setEditingFijo(newId);
+=> setGastosVariables(gastosVariables.filter(x => x.id !== g.id))}>🗑</button></td></tr>))}</tbody></table>)}
+                </div>
+                {mostrarHistorico && (<div className="modal" onClick={() => setMostrarHistorico(false)}><div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header"><div className="modal-title">📊 Histórico de Gastos</div><button className="btn-close" onClick={() => setMostrarHistorico(false)}>×</button></div>
+                    {historicoOrdenado.length === 0 ? (<div className="empty-state">No hay datos históricos</div>) : (<div>{historicoOrdenado.map(key => {
+                        const [año, mes] = key.split('-').map(Number);
+                        const datos = historico[key];
+                        const mesNombre = meses[mes];
+                        const totalGastado = datos.totalGastosFijos + datos.totalGastosVariables;
+                        const sobrante = datos.ingresos - totalGastado;
+                        return (<div key={key} className="historico-item" onClick={() => cargarMesHistorico(key)}><div className="historico-mes">{mesNombre} {año}</div>
+                            <div className="historico-stats"><div><span style={{color:'#6B7280'}}>Ingresos:</span> <strong>{datos.ingresos.toFixed(2)} €</strong></div>
+                            <div><span style={{color:'#6B7280'}}>G. Fijos:</span> <strong style={{color:'#DC2626'}}>{datos.totalGastosFijos.toFixed(2)} €</strong></div>
+                            <div><span style={{color:'#6B7280'}}>G. Variables:</span> <strong style={{color:'#DC2626'}}>{datos.totalGastosVariables.toFixed(2)} €</strong></div>
+                            <div style={{gridColumn:'span 2'}}><span style={{color:'#6B7280'}}>Balance:</span> <strong style={{color: sobrante >= 0 ? '#16A34A' : '#DC2626'}}>{sobrante.toFixed(2)} €</strong></div></div>
+                        </div>);
+                    })}</div>)}
+                </div></div>)}
+            </div></div>);
+        }
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
