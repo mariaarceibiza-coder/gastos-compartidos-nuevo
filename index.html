@@ -300,10 +300,9 @@
     function render() {
       const root = document.getElementById('root');
 
-      // Save focus state before re-render
-      const activeEl = document.activeElement;
-      const focusField = activeEl ? (activeEl.getAttribute('data-field') || activeEl.getAttribute('data-action')) : null;
-      const focusId = activeEl ? activeEl.getAttribute('data-id') : null;
+      // No reemplazar el DOM mientras el usuario está editando un campo numérico
+      const activeField = document.activeElement?.getAttribute('data-field');
+      if (activeField === 'ingresos' || activeField === 'saldoAhorro') return;
 
       const t = totals();
       const b = budget();
@@ -492,20 +491,6 @@
         </div>
       `;
 
-      // Restore focus after re-render
-      if (focusField) {
-        let newEl;
-        if (focusId) {
-          newEl = root.querySelector(`[data-field="${focusField}"][data-id="${focusId}"]`)
-               || root.querySelector(`[data-action="${focusField}"][data-id="${focusId}"]`);
-        } else {
-          newEl = root.querySelector(`[data-field="${focusField}"]`)
-               || root.querySelector(`[data-action="${focusField}"]`);
-        }
-        if (newEl) {
-          newEl.focus();
-        }
-      }
     }
 
     function renderFijo(g) {
