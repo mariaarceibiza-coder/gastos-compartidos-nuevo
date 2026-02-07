@@ -673,8 +673,8 @@
       const el = e.target;
 
       const field = el.getAttribute('data-field');
-      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); render(); scheduleSave(); return; }
-      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); render(); scheduleSave(); return; }
+      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); scheduleSave(); return; }
+      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); scheduleSave(); return; }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -705,6 +705,10 @@
     document.addEventListener('change', (e) => {
       const el = e.target;
       const field = el.getAttribute('data-field');
+      if (field === 'ingresos' || field === 'saldoAhorro') {
+        render();
+        return;
+      }
       if (field === 'mesActual') {
         state.mesActual = Number(el.value || 0);
         const key = getMesKey();
@@ -728,8 +732,14 @@
           const data = docSnap.data() || {};
           ui.applyingRemote = true;
 
-          state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
-          state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
+          // No sobreescribir el campo que el usuario está editando
+          const activeField = document.activeElement?.getAttribute('data-field');
+          if (activeField !== 'ingresos') {
+            state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
+          }
+          if (activeField !== 'saldoAhorro') {
+            state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
+          }
           if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
 
           state.historico = (data.historico && typeof data.historico === 'object') ? data.historico : {};
