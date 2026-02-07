@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Gestor de Gastos</title>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+
+    :root { --vh: 1vh; }
+    .bg-gradient { background: linear-gradient(135deg, #EFF6FF 0%, #E0E7FF 100%); min-height: calc(var(--vh) * 100); padding: 1rem; }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1rem; }
+
+    .header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
+    .header-title { display: flex; align-items: center; gap: 1rem; }
+    .icon-box { background: #4F46E5; padding: 0.75rem; border-radius: 0.75rem; color: white; }
+    .title { font-size: 1.5rem; font-weight: bold; color: #1F2937; }
+    .subtitle { font-size: 0.875rem; color: #6B7280; }
+    .sync-badge { font-size: 0.75rem; color: #16A34A; display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.5rem; }
+
+    .date-selector { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .select, .input { padding: 0.5rem 1rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; }
+    .input-sm { width: 5rem; }
+
+    .grid { display: grid; gap: 1rem; }
+    @media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .section-title { font-size: 1.125rem; font-weight: bold; color: #1F2937; margin-bottom: 1rem; }
+
+    .green-box { background: #F0FDF4; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+    .purple-box { background: #FAF5FF; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 2px solid #E9D5FF; }
+
+    .label { display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
+    .input-full { width: 100%; padding: 0.5rem 1rem; border: 2px solid #86EFAC; border-radius: 0.5rem; font-size: 1.125rem; font-weight: bold; }
+    .input-purple { width: 100%; padding: 0.5rem 1rem; border: 2px solid #C084FC; border-radius: 0.5rem; font-size: 1.125rem; font-weight: bold; }
+
+    .gasto-list { max-height: 24rem; overflow-y: auto; margin-bottom: 1rem; -webkit-overflow-scrolling: touch; }
+    .gasto-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 0.5rem; }
+    .gasto-item:hover { background: #F9FAFB; }
+    .gasto-item.pagado { background: #F0FDF4; }
+
+    .checkbox { width: 1.25rem; height: 1.25rem; cursor: pointer; }
+    .gasto-text { flex: 1; font-size: 0.875rem; color: #374151; }
+    .gasto-text.pagado { text-decoration: line-through; color: #9CA3AF; }
+    .gasto-amount { font-weight: 600; font-size: 0.875rem; color: #1F2937; white-space: nowrap; }
+    .gasto-amount.pagado { color: #16A34A; }
+
+    .btn-icon { padding: 0.25rem; cursor: pointer; border: none; background: transparent; border-radius: 0.25rem; }
+    .btn-icon:hover { background: #F3F4F6; }
+
+    .btn { width: 100%; padding: 0.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-small { padding: 0.5rem 1rem; width: auto; font-size: 0.875rem; }
+    .btn-add { background: #E0E7FF; color: #4F46E5; }
+    .btn-add:hover { background: #C7D2FE; }
+    .btn-primary { background: #4F46E5; color: white; }
+    .btn-primary:hover { background: #4338CA; }
+    .btn-secondary { background: #E5E7EB; color: #374151; }
+    .btn-secondary:hover { background: #D1D5DB; }
+
+    .summary { border-top: 2px solid #E5E7EB; padding-top: 1rem; margin-top: 1.5rem; }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .summary-label { color: #374151; font-weight: bold; }
+    .summary-value { font-weight: bold; }
+    .text-red { color: #DC2626; }
+    .text-green { color: #16A34A; }
+    .text-orange { color: #EA580C; }
+    .text-sm { font-size: 0.75rem; }
+
+    .alert { padding: 1rem; border-radius: 0.5rem; border: 2px solid; margin-bottom: 1.5rem; }
+    .alert-green { background: #F0FDF4; border-color: #86EFAC; }
+    .alert-orange { background: #FFF7ED; border-color: #FED7AA; }
+    .alert-red { background: #FEF2F2; border-color: #FCA5A5; }
+    .alert-content { display: flex; gap: 0.75rem; }
+    .alert-icon { padding: 0.5rem; border-radius: 9999px; font-size: 1.25rem; flex-shrink: 0; }
+    .alert-icon.green { background: #BBF7D0; }
+    .alert-icon.orange { background: #FED7AA; }
+    .alert-icon.red { background: #FCA5A5; }
+    .alert-title { font-weight: bold; margin-bottom: 0.5rem; }
+
+    .progress-bar { width: 100%; background: #E5E7EB; border-radius: 9999px; height: 1.25rem; overflow: hidden; margin-bottom: 1.5rem; }
+    .progress-fill { height: 100%; transition: width 0.5s; }
+    .bg-green-500 { background: #22C55E; }
+    .bg-orange-500 { background: #F97316; }
+    .bg-red-500 { background: #EF4444; }
+
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    .stat-box { padding: 0.75rem; border-radius: 0.5rem; }
+    .stat-box.blue { background: #EFF6FF; }
+    .stat-box.red { background: #FEF2F2; }
+    .stat-box.green { background: #F0FDF4; }
+    .stat-box.full { grid-column: span 2; }
+    .stat-label { font-size: 0.75rem; color: #6B7280; margin-bottom: 0.25rem; }
+    .stat-value { font-size: 1.5rem; font-weight: bold; }
+
+    .form-box { background: #EEF2FF; padding: 1rem; border-radius: 0.5rem; }
+    .form-title { font-weight: 600; color: #312E81; margin-bottom: 0.75rem; }
+    .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .input-form { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 0.5rem; font-weight: 600; color: #374151; font-size: 0.875rem; border-bottom: 2px solid #E5E7EB; }
+    td { padding: 0.5rem; font-size: 0.875rem; border-bottom: 1px solid #F3F4F6; }
+    tr:hover { background: #F9FAFB; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+
+    .empty-state { text-align: center; color: #6B7280; padding: 2rem; }
+    .loading { text-align: center; padding: 2rem; color: #6B7280; }
+
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; height: calc(var(--vh) * 100); overscroll-behavior: contain; }
+    .modal-content { background: white; border-radius: 1rem; padding: 1.5rem; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-title { font-size: 1.25rem; font-weight: bold; color: #1F2937; }
+    .btn-close { background: #F3F4F6; border: none; border-radius: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 1.25rem; }
+    .btn-close:hover { background: #E5E7EB; }
+
+    .historico-item { padding: 1rem; border: 2px solid #E5E7EB; border-radius: 0.5rem; margin-bottom: 0.75rem; cursor: pointer; }
+    .historico-item:hover { border-color: #C7D2FE; background: #F9FAFB; }
+    .historico-mes { font-weight: bold; color: #1F2937; margin-bottom: 0.5rem; }
+    .historico-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.875rem; }
+
+    .error-box { background: #FEF2F2; border: 2px solid #FCA5A5; color: #7F1D1D; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1rem; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script>
+    // ===== iPhone height fix (evita saltos/temblor por barra del navegador) =====
+    (function() {
+      function setVh() {
+        document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+      }
+      setVh();
+      window.addEventListener('resize', setVh, { passive: true });
+    })();
+
+    // ===== Error visible (para no tener pantallazo en blanco) =====
+    function showError(err) {
+      const root = document.getElementById('root');
+      const msg = (err && (err.stack || err.message)) ? (err.stack || err.message) : String(err);
+      root.innerHTML = '<div class="bg-gradient"><div class="container"><div class="card"><div class="error-box">ERROR:\n\n' +
+        escapeHtml(msg) + '</div></div></div></div>';
+    }
+    window.addEventListener('error', (e) => { showError(e.error || e.message || 'Script error'); });
+    window.addEventListener('unhandledrejection', (e) => { showError(e.reason || 'Promise rejection'); });
+
+    function escapeHtml(s){
+      return String(s ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#039;");
+    }
+
+    // ===== Firebase =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyB3kiy6fyLoAgCEH0Kw7K_iQt8YkebY9UY",
+      authDomain: "gastos-familia-marce.firebaseapp.com",
+      projectId: "gastos-familia-marce",
+      storageBucket: "gastos-familia-marce.firebasestorage.app",
+      messagingSenderId: "117082983018",
+      appId: "1:117082983018:web:59a5bfd4a3e015d7251813"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const ref = db.collection('gastos').doc('data');
+
+    // ===== Estado app =====
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    const state = {
+      ingresos: 3350,
+      saldoAhorro: 0,
+      gastosFijos: [
+        { id: 1, categoria: 'Alquiler', presupuesto: 950, pagado: false },
+        { id: 2, categoria: 'Coche', presupuesto: 400, pagado: false },
+        { id: 3, categoria: 'Guardería', presupuesto: 340, pagado: false },
+        { id: 4, categoria: 'Teléfono', presupuesto: 39.10, pagado: false },
+        { id: 5, categoria: 'Luz', presupuesto: 42, pagado: false },
+        { id: 6, categoria: 'Parking', presupuesto: 121, pagado: false },
+        { id: 7, categoria: 'Gas', presupuesto: 40, pagado: false },
+        { id: 8, categoria: 'Tarjeta cumple Bruno', presupuesto: 50, pagado: false },
+        { id: 9, categoria: 'Agua', presupuesto: 100, pagado: false },
+        { id: 10, categoria: 'Ahorro', presupuesto: 250, pagado: false }
+      ],
+      gastosVariables: [],
+      mesActual: new Date().getMonth(),
+      añoActual: new Date().getFullYear(),
+      editingFijo: null,
+      nuevoGasto: { fecha: '', monto: '', descripcion: '' },
+      mostrarHistorico: false,
+      historico: {},
+      loading: true,
+      synced: false
+    };
+
+    const ui = {
+      applyingRemote: false,   // CLAVE: corta el loop de colaboración
+      saveTimer: null,
+      syncTimer: null,
+      unsub: null
+    };
+
+    function getMesKey() { return `${state.añoActual}-${state.mesActual}`; }
+    function fmt2(n){ return (Number(n)||0).toFixed(2); }
+
+    function setSynced() {
+      state.synced = true;
+      if (ui.syncTimer) clearTimeout(ui.syncTimer);
+      ui.syncTimer = setTimeout(() => { state.synced = false; render(); }, 1200);
+    }
+
+    function totals() {
+      const totalGastosFijos = state.gastosFijos.reduce((sum, g) => sum + (Number(g.presupuesto)||0), 0);
+      const totalGastosVariables = state.gastosVariables.reduce((sum, g) => sum + (Number(g.monto)||0), 0);
+      const pagados = state.gastosFijos.filter(g => g.pagado).reduce((sum, g) => sum + (Number(g.presupuesto)||0), 0);
+      const pendientes = totalGastosFijos - pagados;
+      return { totalGastosFijos, totalGastosVariables, pagados, pendientes };
+    }
+
+    function budget() {
+      const { totalGastosFijos, totalGastosVariables } = totals();
+      const ingresos = Number(state.ingresos)||0;
+      const resto = ingresos - totalGastosFijos;
+
+      const diasMes = new Date(state.añoActual, state.mesActual + 1, 0).getDate();
+      const presupuestoRestante = resto - totalGastosVariables;
+
+      const hoy = new Date();
+      const diaActual = hoy.getDate();
+      const diasRestantes = diasMes - diaActual;
+
+      const gastoPromedioDiario = diaActual > 0 ? totalGastosVariables / diaActual : 0;
+      const proyeccionFinMes = totalGastosVariables + (gastoPromedioDiario * diasRestantes);
+      const diferenciaPrevista = resto - proyeccionFinMes;
+
+      const estadoProyeccion = diferenciaPrevista >= 0 ? 'bien' : (diferenciaPrevista >= -100 ? 'ajustado' : 'peligro');
+      const porcentajeGastado = resto > 0 ? (totalGastosVariables / resto) * 100 : 0;
+
+      return { resto, diasMes, presupuestoRestante, diasRestantes, gastoPromedioDiario, proyeccionFinMes, diferenciaPrevista, estadoProyeccion, porcentajeGastado };
+    }
+
+    function scheduleSave() {
+      if (state.loading) return;
+      if (ui.applyingRemote) return; // CLAVE: si lo que cambia viene de Firestore, NO guardamos
+
+      if (ui.saveTimer) clearTimeout(ui.saveTimer);
+      ui.saveTimer = setTimeout(saveNow, 800); // debounce real
+    }
+
+    async function saveNow() {
+      const key = getMesKey();
+      const t = totals();
+
+      const nuevoHistorico = {
+        ...(state.historico || {}),
+        [key]: {
+          gastosVariables: state.gastosVariables,
+          ingresos: Number(state.ingresos)||0,
+          gastosFijos: state.gastosFijos.map(g => ({...g})),
+          totalGastosFijos: t.totalGastosFijos,
+          totalGastosVariables: t.totalGastosVariables
+        }
+      };
+
+      state.historico = nuevoHistorico;
+
+      try {
+        await ref.set({
+          ingresos: Number(state.ingresos)||0,
+          gastosFijos: state.gastosFijos,
+          saldoAhorro: Number(state.saldoAhorro)||0,
+          historico: nuevoHistorico,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        setSynced();
+        render();
+      } catch (e) {
+        console.error(e);
+        showError(e);
+      }
+    }
+
+    // ===== Render =====
+    function render() {
+      const root = document.getElementById('root');
+      const t = totals();
+      const b = budget();
+
+      if (state.loading) {
+        root.innerHTML = `
+          <div class="bg-gradient">
+            <div class="container">
+              <div class="loading">
+                <div style="font-size:2rem;margin-bottom:1rem">💰</div>
+                <div>Cargando datos...</div>
+              </div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      const alertClass = (b.estadoProyeccion === 'bien') ? 'alert-green' : (b.estadoProyeccion === 'ajustado' ? 'alert-orange' : 'alert-red');
+      const alertIconClass = (b.estadoProyeccion === 'bien') ? 'green' : (b.estadoProyeccion === 'ajustado' ? 'orange' : 'red');
+
+      const porcentaje = Math.min(Math.max(b.porcentajeGastado, 0), 100);
+      const barColor = (porcentaje > 90) ? 'bg-red-500' : (porcentaje > 70) ? 'bg-orange-500' : 'bg-green-500';
+
+      const historicoOrdenado = Object.keys(state.historico || {}).sort().reverse();
+
+      root.innerHTML = `
+        <div class="bg-gradient">
+          <div class="container">
+
+            <div class="card">
+              <div class="header">
+                <div class="header-title">
+                  <div class="icon-box">💰</div>
+                  <div>
+                    <div class="title">Gestor de Gastos</div>
+                    <div class="subtitle">
+                      Control mensual compartido
+                      ${state.synced ? `<span class="sync-badge">✓ Sincronizado</span>` : ``}
+                    </div>
+                  </div>
+                </div>
+                <div class="date-selector">
+                  <button class="btn btn-small btn-secondary" data-action="open-historico">📊 Histórico</button>
+
+                  <select class="select" data-field="mesActual">
+                    ${meses.map((m, i) => `<option value="${i}" ${i===state.mesActual ? 'selected':''}>${m}</option>`).join('')}
+                  </select>
+
+                  <input class="select input-sm" type="number" data-field="añoActual" value="${state.añoActual}" />
+                </div>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="section-title">Estado del Presupuesto</div>
+
+                <div class="alert ${alertClass}">
+                  <div class="alert-content">
+                    <div class="alert-icon ${alertIconClass}">${b.estadoProyeccion === 'bien' ? '✓' : '⚠'}</div>
+                    <div style="flex:1">
+                      <div class="alert-title text-sm">
+                        ${b.estadoProyeccion === 'bien' ? '¡Vas genial!' : (b.estadoProyeccion === 'ajustado' ? 'Vas un poco justo' : '¡Cuidado! Te vas a pasar')}
+                      </div>
+                      <div class="text-sm">
+                        <div><strong>Días restantes:</strong> ${b.diasRestantes} días</div>
+                        <div><strong>Gasto promedio:</strong> ${b.gastoPromedioDiario.toFixed(2)} €/día</div>
+                        <div><strong>Proyección:</strong> ${b.proyeccionFinMes.toFixed(2)} €</div>
+                        <div style="margin-top:0.5rem;font-weight:bold">
+                          ${b.diferenciaPrevista >= 0 ? `Te sobrarán ${b.diferenciaPrevista.toFixed(2)} €` : `Te faltarán ${Math.abs(b.diferenciaPrevista).toFixed(2)} €`}
+                        </div>
+                        ${(b.estadoProyeccion !== 'bien' && b.diasRestantes > 0) ? `
+                          <div class="text-sm" style="margin-top:0.5rem">
+                            💡 Máximo ${(b.presupuestoRestante / b.diasRestantes).toFixed(2)} €/día
+                          </div>` : ``}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="margin-bottom:1rem">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
+                    <span style="font-weight:600">Gastado</span>
+                    <span style="font-weight:bold;color:#4F46E5">${b.porcentajeGastado.toFixed(1)}%</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill ${barColor}" style="width:${porcentaje}%"></div>
+                  </div>
+                </div>
+
+                <div class="stats">
+                  <div class="stat-box blue">
+                    <div class="stat-label">Presupuesto</div>
+                    <div class="stat-value" style="color:#2563EB">${fmt2(b.resto)} €</div>
+                  </div>
+                  <div class="stat-box red">
+                    <div class="stat-label">Gastado</div>
+                    <div class="stat-value text-red">${fmt2(t.totalGastosVariables)} €</div>
+                  </div>
+                  <div class="stat-box green full">
+                    <div class="stat-label">Restante</div>
+                    <div class="stat-value text-green" style="font-size:2rem">${fmt2(b.presupuestoRestante)} €</div>
+                  </div>
+                </div>
+
+                <div class="form-box">
+                  <div class="form-title">Añadir Gasto</div>
+                  <div class="input-group">
+                    <input class="input-form" type="date" data-field="nuevo-fecha" value="${escapeHtml(state.nuevoGasto.fecha)}" />
+                    <input class="input-form" type="number" step="0.01" placeholder="Importe (€)" data-field="nuevo-monto" value="${escapeHtml(state.nuevoGasto.monto)}" />
+                    <input class="input-form" type="text" placeholder="Descripción" data-field="nuevo-desc" value="${escapeHtml(state.nuevoGasto.descripcion)}" />
+                    <button class="btn btn-primary" data-action="add-variable">+ Añadir Gasto</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="section-title">Ingresos y Gastos Fijos</div>
+
+                <div class="green-box">
+                  <label class="label">Ingresos Mensuales</label>
+                  <input class="input-full" type="number" step="0.01" data-field="ingresos" value="${escapeHtml(state.ingresos)}" />
+                </div>
+
+                <div class="purple-box">
+                  <label class="label">💰 Saldo Total en Cuenta de Ahorro</label>
+                  <input class="input-purple" type="number" step="0.01" data-field="saldoAhorro" value="${escapeHtml(state.saldoAhorro)}" />
+                  <div style="margin-top:0.5rem;font-size:0.75rem;color:#6B7280">Este es tu saldo acumulado total en la cuenta de ahorro</div>
+                </div>
+
+                <div class="gasto-list">
+                  ${state.gastosFijos.map(g => renderFijo(g)).join('')}
+                </div>
+
+                <button class="btn btn-add" data-action="add-fijo">+ Añadir Gasto Fijo</button>
+
+                <div class="summary">
+                  <div class="summary-row">
+                    <span class="summary-label">Total gastos fijos</span>
+                    <span class="summary-value">${fmt2(t.totalGastosFijos)} €</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label text-green">Pagado</span>
+                    <span class="summary-value text-green">${fmt2(t.pagados)} €</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label text-red">Pendiente</span>
+                    <span class="summary-value text-red">${fmt2(t.pendientes)} €</span>
+                  </div>
+                </div>
+
+                <div class="section-title" style="margin-top:1rem">Gastos Variables</div>
+
+                ${state.gastosVariables.length === 0 ? `
+                  <div class="empty-state">No hay gastos variables este mes</div>
+                ` : `
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Descripción</th>
+                        <th class="text-right">Monto</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${state.gastosVariables.map(g => `
+                        <tr>
+                          <td>${escapeHtml(g.fecha)}</td>
+                          <td>${escapeHtml(g.descripcion || '—')}</td>
+                          <td class="text-right">${fmt2(g.monto)} €</td>
+                          <td class="text-center">
+                            <button class="btn-icon" data-action="del-variable" data-id="${g.id}">🗑</button>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                `}
+              </div>
+            </div>
+
+            ${state.mostrarHistorico ? renderHistorico(historicoOrdenado) : ``}
+
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFijo(g) {
+      const editing = state.editingFijo === g.id;
+      return `
+        <div class="gasto-item ${g.pagado ? 'pagado':''}">
+          <input class="checkbox" type="checkbox" ${g.pagado?'checked':''} data-action="toggle-pagado" data-id="${g.id}" />
+
+          ${editing ? `
+            <input class="input" style="flex:1" value="${escapeHtml(g.categoria)}" data-action="edit-categoria" data-id="${g.id}" />
+            <input class="input" style="width:5rem" type="number" step="0.01" value="${escapeHtml(g.presupuesto)}" data-action="edit-presupuesto" data-id="${g.id}" />
+            <button class="btn-icon" data-action="done-edit">✓</button>
+          ` : `
+            <span class="gasto-text ${g.pagado?'pagado':''}">${escapeHtml(g.categoria)}</span>
+            <span class="gasto-amount ${g.pagado?'pagado':''}">${fmt2(g.presupuesto)} €</span>
+            <button class="btn-icon" data-action="start-edit" data-id="${g.id}">✎</button>
+            <button class="btn-icon" data-action="del-fijo" data-id="${g.id}">🗑</button>
+          `}
+        </div>
+      `;
+    }
+
+    function renderHistorico(keys) {
+      return `
+        <div class="modal" data-action="close-historico">
+          <div class="modal-content" data-stop="1">
+            <div class="modal-header">
+              <div class="modal-title">📊 Histórico de Gastos</div>
+              <button class="btn-close" data-action="close-historico">×</button>
+            </div>
+
+            ${keys.length === 0 ? `<div class="empty-state">No hay datos históricos</div>` : `
+              <div>
+                ${keys.map(key => {
+                  const [año, mes] = key.split('-').map(Number);
+                  const datos = (state.historico && state.historico[key]) ? state.historico[key] : {};
+                  const mesNombre = meses[mes] || key;
+                  const totalGastado = (Number(datos.totalGastosFijos)||0) + (Number(datos.totalGastosVariables)||0);
+                  const sobrante = (Number(datos.ingresos)||0) - totalGastado;
+
+                  return `
+                    <div class="historico-item" data-action="load-mes" data-key="${escapeHtml(key)}">
+                      <div class="historico-mes">${mesNombre} ${año}</div>
+                      <div class="historico-stats">
+                        <div><span style="color:#6B7280">Ingresos:</span> <strong>${fmt2(datos.ingresos)} €</strong></div>
+                        <div><span style="color:#6B7280">G. Fijos:</span> <strong style="color:#DC2626">${fmt2(datos.totalGastosFijos)} €</strong></div>
+                        <div><span style="color:#6B7280">G. Variables:</span> <strong style="color:#DC2626">${fmt2(datos.totalGastosVariables)} €</strong></div>
+                        <div style="grid-column:span 2">
+                          <span style="color:#6B7280">Balance:</span>
+                          <strong style="color:${sobrante>=0 ? '#16A34A' : '#DC2626'}">${fmt2(sobrante)} €</strong>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    // ===== Eventos (delegación) =====
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.getAttribute('data-action');
+
+      // modal: click fuera cierra, dentro no
+      if (action === 'close-historico') {
+        const inside = e.target.closest('[data-stop="1"]');
+        if (inside) return;
+        state.mostrarHistorico = false;
+        document.body.style.overflow = 'auto';
+        render();
+        return;
+      }
+
+      if (action === 'open-historico') {
+        state.mostrarHistorico = true;
+        document.body.style.overflow = 'hidden';
+        render();
+        return;
+      }
+
+      if (action === 'load-mes') {
+        const key = btn.getAttribute('data-key');
+        const [año, mes] = key.split('-').map(Number);
+        state.añoActual = año;
+        state.mesActual = mes;
+        state.mostrarHistorico = false;
+        document.body.style.overflow = 'auto';
+
+        const mesData = state.historico?.[key];
+        state.gastosVariables = Array.isArray(mesData?.gastosVariables) ? mesData.gastosVariables : [];
+        render();
+        scheduleSave();
+        return;
+      }
+
+      if (action === 'add-variable') {
+        if (state.nuevoGasto.fecha && state.nuevoGasto.monto) {
+          state.gastosVariables.push({
+            id: Date.now(),
+            fecha: state.nuevoGasto.fecha,
+            monto: Number(state.nuevoGasto.monto),
+            descripcion: state.nuevoGasto.descripcion || ''
+          });
+          state.nuevoGasto = { fecha:'', monto:'', descripcion:'' };
+          render();
+          scheduleSave();
+        }
+        return;
+      }
+
+      if (action === 'del-variable') {
+        const id = Number(btn.getAttribute('data-id'));
+        state.gastosVariables = state.gastosVariables.filter(x => x.id !== id);
+        render();
+        scheduleSave();
+        return;
+      }
+
+      if (action === 'add-fijo') {
+        const newId = Math.max(0, ...state.gastosFijos.map(g => g.id)) + 1;
+        state.gastosFijos.push({ id: newId, categoria: 'Nuevo gasto', presupuesto: 0, pagado: false });
+        state.editingFijo = newId;
+        render();
+        scheduleSave();
+        return;
+      }
+
+      if (action === 'toggle-pagado') {
+        const id = Number(btn.getAttribute('data-id'));
+        state.gastosFijos = state.gastosFijos.map(x => x.id === id ? ({...x, pagado: !x.pagado}) : x);
+        render();
+        scheduleSave();
+        return;
+      }
+
+      if (action === 'start-edit') {
+        state.editingFijo = Number(btn.getAttribute('data-id'));
+        render();
+        return;
+      }
+
+      if (action === 'done-edit') {
+        state.editingFijo = null;
+        render();
+        scheduleSave();
+        return;
+      }
+
+      if (action === 'del-fijo') {
+        const id = Number(btn.getAttribute('data-id'));
+        state.gastosFijos = state.gastosFijos.filter(x => x.id !== id);
+        if (state.editingFijo === id) state.editingFijo = null;
+        render();
+        scheduleSave();
+        return;
+      }
+    }, { passive: true });
+
+    document.addEventListener('input', (e) => {
+      const el = e.target;
+
+      const field = el.getAttribute('data-field');
+      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); render(); scheduleSave(); return; }
+      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); render(); scheduleSave(); return; }
+      if (field === 'añoActual') {
+        state.añoActual = Number(el.value || new Date().getFullYear());
+        const key = getMesKey();
+        const mesData = state.historico?.[key];
+        state.gastosVariables = Array.isArray(mesData?.gastosVariables) ? mesData.gastosVariables : [];
+        render(); scheduleSave(); return;
+      }
+
+      if (field === 'nuevo-fecha') { state.nuevoGasto.fecha = el.value; return; }
+      if (field === 'nuevo-monto') { state.nuevoGasto.monto = el.value; return; }
+      if (field === 'nuevo-desc')  { state.nuevoGasto.descripcion = el.value; return; }
+
+      const action = el.getAttribute('data-action');
+      if (action === 'edit-categoria') {
+        const id = Number(el.getAttribute('data-id'));
+        state.gastosFijos = state.gastosFijos.map(x => x.id === id ? ({...x, categoria: el.value}) : x);
+        scheduleSave();
+        return;
+      }
+      if (action === 'edit-presupuesto') {
+        const id = Number(el.getAttribute('data-id'));
+        state.gastosFijos = state.gastosFijos.map(x => x.id === id ? ({...x, presupuesto: Number(el.value || 0)}) : x);
+        scheduleSave();
+        return;
+      }
+    });
+
+    document.addEventListener('change', (e) => {
+      const el = e.target;
+      const field = el.getAttribute('data-field');
+      if (field === 'mesActual') {
+        state.mesActual = Number(el.value || 0);
+        const key = getMesKey();
+        const mesData = state.historico?.[key];
+        state.gastosVariables = Array.isArray(mesData?.gastosVariables) ? mesData.gastosVariables : [];
+        render();
+        scheduleSave();
+      }
+    });
+
+    // ===== Firestore realtime (sin bucle) =====
+    function startRealtime() {
+      ui.unsub = ref.onSnapshot((docSnap) => {
+        try {
+          if (!docSnap.exists) {
+            state.loading = false;
+            render();
+            return;
+          }
+
+          const data = docSnap.data() || {};
+          ui.applyingRemote = true;
+
+          state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
+          state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
+          if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
+
+          state.historico = (data.historico && typeof data.historico === 'object') ? data.historico : {};
+
+          const key = getMesKey();
+          const mesData = state.historico?.[key];
+          state.gastosVariables = Array.isArray(mesData?.gastosVariables) ? mesData.gastosVariables : [];
+
+          state.loading = false;
+
+          // soltamos el bloqueo justo después de pintar (corta el loop)
+          setTimeout(() => { ui.applyingRemote = false; }, 0);
+
+          setSynced();
+          render();
+        } catch (err) {
+          showError(err);
+        }
+      }, (err) => showError(err));
+    }
+
+    // ===== Inicio =====
+    render();
+    startRealtime();
+  </script>
+</body>
+</html>
