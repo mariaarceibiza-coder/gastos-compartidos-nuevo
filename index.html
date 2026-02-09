@@ -210,6 +210,7 @@
 
     const ui = {
       applyingRemote: false,   // CLAVE: corta el loop de colaboración
+      editingField: null,      // 'ingresos' | 'saldoAhorro' | null — bloquea render mientras escribes
       saveTimer: null,
       syncTimer: null,
       unsub: null
@@ -298,6 +299,9 @@
 
     // ===== Render =====
     function render() {
+      // BLOQUEO: si el usuario está escribiendo en ingresos/saldoAhorro, NO destruir el DOM
+      if (ui.editingField) return;
+
       const root = document.getElementById('root');
       const t = totals();
       const b = budget();
@@ -652,8 +656,9 @@
       const el = e.target;
 
       const field = el.getAttribute('data-field');
-      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); render(); scheduleSave(); return; }
-      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); render(); scheduleSave(); return; }
+      // Ingresos y saldoAhorro: actualizar estado y guardar, pero NO re-renderizar (el input sigue vivo)
+      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); scheduleSave(); return; }
+      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); scheduleSave(); return; }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -694,6 +699,23 @@
       }
     });
 
+    // ===== Focus/Blur: proteger inputs durante escritura =====
+    document.addEventListener('focusin', (e) => {
+      const field = e.target.getAttribute('data-field');
+      if (field === 'ingresos' || field === 'saldoAhorro') {
+        ui.editingField = field;
+      }
+    }, true);
+
+    document.addEventListener('focusout', (e) => {
+      const field = e.target.getAttribute('data-field');
+      if (field === 'ingresos' || field === 'saldoAhorro') {
+        ui.editingField = null;
+        // Ahora que el usuario salió del campo, render completo para actualizar estadísticas
+        render();
+      }
+    }, true);
+
     // ===== Firestore realtime (sin bucle) =====
     function startRealtime() {
       ui.unsub = ref.onSnapshot((docSnap) => {
@@ -707,8 +729,13 @@
           const data = docSnap.data() || {};
           ui.applyingRemote = true;
 
-          state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
-          state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
+          // No sobrescribir el campo que el usuario está editando ahora mismo
+          if (ui.editingField !== 'ingresos') {
+            state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
+          }
+          if (ui.editingField !== 'saldoAhorro') {
+            state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
+          }
           if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
 
           state.historico = (data.historico && typeof data.historico === 'object') ? data.historico : {};
