@@ -656,9 +656,17 @@
       const el = e.target;
 
       const field = el.getAttribute('data-field');
-      // Ingresos y saldoAhorro: actualizar estado y guardar, pero NO re-renderizar (el input sigue vivo)
-      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); scheduleSave(); return; }
-      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); scheduleSave(); return; }
+      // Ingresos y saldoAhorro: SOLO actualizar estado. NO render, NO save. Todo se guarda al salir (blur).
+      if (field === 'ingresos') {
+        ui.editingField = 'ingresos'; // backup: por si focusin no disparó
+        state.ingresos = Number(el.value || 0);
+        return;
+      }
+      if (field === 'saldoAhorro') {
+        ui.editingField = 'saldoAhorro';
+        state.saldoAhorro = Number(el.value || 0);
+        return;
+      }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -704,6 +712,9 @@
       const field = e.target.getAttribute('data-field');
       if (field === 'ingresos' || field === 'saldoAhorro') {
         ui.editingField = field;
+        // Cancelar cualquier save/render pendiente para que nada toque el DOM
+        if (ui.saveTimer) { clearTimeout(ui.saveTimer); ui.saveTimer = null; }
+        if (ui.syncTimer) { clearTimeout(ui.syncTimer); ui.syncTimer = null; }
       }
     }, true);
 
@@ -711,7 +722,8 @@
       const field = e.target.getAttribute('data-field');
       if (field === 'ingresos' || field === 'saldoAhorro') {
         ui.editingField = null;
-        // Ahora que el usuario salió del campo, render completo para actualizar estadísticas
+        // Ahora que salió del campo: guardar y re-renderizar
+        saveNow();
         render();
       }
     }, true);
@@ -727,15 +739,18 @@
           }
 
           const data = docSnap.data() || {};
+
+          // Si el usuario está escribiendo, ignorar TODA actualización remota
+          // (se sincronizará cuando salga del campo)
+          if (ui.editingField) {
+            state.loading = false;
+            return;
+          }
+
           ui.applyingRemote = true;
 
-          // No sobrescribir el campo que el usuario está editando ahora mismo
-          if (ui.editingField !== 'ingresos') {
-            state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
-          }
-          if (ui.editingField !== 'saldoAhorro') {
-            state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
-          }
+          state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
+          state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
           if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
 
           state.historico = (data.historico && typeof data.historico === 'object') ? data.historico : {};
