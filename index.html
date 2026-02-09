@@ -33,7 +33,7 @@
     .input-sm { width: 5rem; }
     .period-row { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB; font-size: 0.875rem; color: #374151; flex-wrap: wrap; }
     .period-row label { font-weight: 600; }
-    .input-day { width: 3.5rem; padding: 0.35rem 0.5rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; text-align: center; font-size: 0.875rem; }
+    .input-day { padding: 0.35rem 0.5rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; }
 
     .grid { display: grid; gap: 1rem; }
     @media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
@@ -250,11 +250,9 @@
 
       let fechaInicio, fechaFin;
       if (di <= df) {
-        // Mismo mes: ej. del 1 al 28, del 5 al 25
         fechaInicio = new Date(state.añoActual, state.mesActual, di);
         fechaFin = new Date(state.añoActual, state.mesActual, df);
       } else {
-        // Cruza al mes siguiente: ej. del 25 al 24 = día 25 de este mes al 24 del siguiente
         fechaInicio = new Date(state.añoActual, state.mesActual, di);
         fechaFin = new Date(state.añoActual, state.mesActual + 1, df);
       }
@@ -383,8 +381,13 @@
               </div>
               <div class="period-row">
                 <label>Período:</label>
-                del día <input class="input-day" type="number" min="1" max="31" data-field="diaInicio" value="${state.diaInicio}" />
-                al día <input class="input-day" type="number" min="1" max="31" data-field="diaFin" value="${b.diaFinReal}" />
+                del día <select class="input-day" data-field="diaInicio">
+                  ${Array.from({length:31},(_,i)=>i+1).map(d => `<option value="${d}" ${d===state.diaInicio?'selected':''}>${d}</option>`).join('')}
+                </select>
+                al día <select class="input-day" data-field="diaFin">
+                  <option value="0" ${state.diaFin===0?'selected':''}>Fin de mes</option>
+                  ${Array.from({length:31},(_,i)=>i+1).map(d => `<option value="${d}" ${d===state.diaFin?'selected':''}>${d}</option>`).join('')}
+                </select>
               </div>
             </div>
 
@@ -745,6 +748,16 @@
         const key = getMesKey();
         const mesData = state.historico?.[key];
         state.gastosVariables = Array.isArray(mesData?.gastosVariables) ? mesData.gastosVariables : [];
+        render();
+        scheduleSave();
+      }
+      if (field === 'diaInicio') {
+        state.diaInicio = Number(el.value || 1);
+        render();
+        scheduleSave();
+      }
+      if (field === 'diaFin') {
+        state.diaFin = Number(el.value || 0);
         render();
         scheduleSave();
       }
