@@ -23,7 +23,7 @@
 
     .header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
     .header-title { display: flex; align-items: center; gap: 1rem; }
-    .icon-box { background: #4F46E5; padding: 0.75rem; border-radius: 0.75rem; color: white; }
+    .icon-box { background: #DC2626; padding: 0.75rem; border-radius: 0.75rem; color: white; }
     .title { font-size: 1.5rem; font-weight: bold; color: #1F2937; }
     .subtitle { font-size: 0.875rem; color: #6B7280; }
     .sync-badge { font-size: 0.75rem; color: #16A34A; display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.5rem; }
@@ -210,6 +210,7 @@
 
     const ui = {
       applyingRemote: false,   // CLAVE: corta el loop de colaboración
+      editingField: null,      // 'ingresos' | 'saldoAhorro' | null — bloquea render mientras escribes
       saveTimer: null,
       syncTimer: null,
       unsub: null
@@ -298,6 +299,9 @@
 
     // ===== Render =====
     function render() {
+      // BLOQUEO: si el usuario está escribiendo en ingresos/saldoAhorro, NO destruir el DOM
+      if (ui.editingField) return;
+
       const root = document.getElementById('root');
       const t = totals();
       const b = budget();
@@ -652,8 +656,17 @@
       const el = e.target;
 
       const field = el.getAttribute('data-field');
-      if (field === 'ingresos') { state.ingresos = Number(el.value || 0); render(); scheduleSave(); return; }
-      if (field === 'saldoAhorro') { state.saldoAhorro = Number(el.value || 0); render(); scheduleSave(); return; }
+      // Ingresos y saldoAhorro: SOLO actualizar estado. NO render, NO save. Todo se guarda al salir (blur).
+      if (field === 'ingresos') {
+        ui.editingField = 'ingresos'; // backup: por si focusin no disparó
+        state.ingresos = Number(el.value || 0);
+        return;
+      }
+      if (field === 'saldoAhorro') {
+        ui.editingField = 'saldoAhorro';
+        state.saldoAhorro = Number(el.value || 0);
+        return;
+      }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -694,6 +707,27 @@
       }
     });
 
+    // ===== Focus/Blur: proteger inputs durante escritura =====
+    document.addEventListener('focusin', (e) => {
+      const field = e.target.getAttribute('data-field');
+      if (field === 'ingresos' || field === 'saldoAhorro') {
+        ui.editingField = field;
+        // Cancelar cualquier save/render pendiente para que nada toque el DOM
+        if (ui.saveTimer) { clearTimeout(ui.saveTimer); ui.saveTimer = null; }
+        if (ui.syncTimer) { clearTimeout(ui.syncTimer); ui.syncTimer = null; }
+      }
+    }, true);
+
+    document.addEventListener('focusout', (e) => {
+      const field = e.target.getAttribute('data-field');
+      if (field === 'ingresos' || field === 'saldoAhorro') {
+        ui.editingField = null;
+        // Ahora que salió del campo: guardar y re-renderizar
+        saveNow();
+        render();
+      }
+    }, true);
+
     // ===== Firestore realtime (sin bucle) =====
     function startRealtime() {
       ui.unsub = ref.onSnapshot((docSnap) => {
@@ -705,6 +739,14 @@
           }
 
           const data = docSnap.data() || {};
+
+          // Si el usuario está escribiendo, ignorar TODA actualización remota
+          // (se sincronizará cuando salga del campo)
+          if (ui.editingField) {
+            state.loading = false;
+            return;
+          }
+
           ui.applyingRemote = true;
 
           state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
