@@ -249,10 +249,12 @@
       const df = (Number(state.diaFin) || 0) === 0 ? ultimoDiaMes : Number(state.diaFin);
 
       let fechaInicio, fechaFin;
-      if (di <= df) {
+      if (di < df) {
+        // Mismo mes: ej. del 1 al 28
         fechaInicio = new Date(state.añoActual, state.mesActual, di);
         fechaFin = new Date(state.añoActual, state.mesActual, df);
       } else {
+        // Cruza al mes siguiente: ej. del 26 al 26 o del 26 al 25
         fechaInicio = new Date(state.añoActual, state.mesActual, di);
         fechaFin = new Date(state.añoActual, state.mesActual + 1, df);
       }
@@ -703,16 +705,6 @@
         state.saldoAhorro = Number(el.value || 0);
         return;
       }
-      if (field === 'diaInicio') {
-        ui.editingField = 'diaInicio';
-        state.diaInicio = Number(el.value || 1);
-        return;
-      }
-      if (field === 'diaFin') {
-        ui.editingField = 'diaFin';
-        state.diaFin = Number(el.value || 0);
-        return;
-      }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -764,7 +756,7 @@
     });
 
     // ===== Focus/Blur: proteger inputs durante escritura =====
-    const protectedFields = ['ingresos', 'saldoAhorro', 'diaInicio', 'diaFin'];
+    const protectedFields = ['ingresos', 'saldoAhorro'];
 
     document.addEventListener('focusin', (e) => {
       const field = e.target.getAttribute('data-field');
