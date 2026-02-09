@@ -274,7 +274,9 @@
       const estadoProyeccion = diferenciaPrevista >= 0 ? 'bien' : (diferenciaPrevista >= -100 ? 'ajustado' : 'peligro');
       const porcentajeGastado = resto > 0 ? (totalGastosVariables / resto) * 100 : 0;
 
-      return { resto, diasMes, presupuestoRestante, diasRestantes, gastoPromedioDiario, proyeccionFinMes, diferenciaPrevista, estadoProyeccion, porcentajeGastado };
+      const diaFinReal = df; // para mostrar en UI
+
+      return { resto, diasMes, presupuestoRestante, diasRestantes, gastoPromedioDiario, proyeccionFinMes, diferenciaPrevista, estadoProyeccion, porcentajeGastado, diaFinReal };
     }
 
     function scheduleSave() {
@@ -701,6 +703,16 @@
         state.saldoAhorro = Number(el.value || 0);
         return;
       }
+      if (field === 'diaInicio') {
+        ui.editingField = 'diaInicio';
+        state.diaInicio = Number(el.value || 1);
+        return;
+      }
+      if (field === 'diaFin') {
+        ui.editingField = 'diaFin';
+        state.diaFin = Number(el.value || 0);
+        return;
+      }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -752,11 +764,12 @@
     });
 
     // ===== Focus/Blur: proteger inputs durante escritura =====
+    const protectedFields = ['ingresos', 'saldoAhorro', 'diaInicio', 'diaFin'];
+
     document.addEventListener('focusin', (e) => {
       const field = e.target.getAttribute('data-field');
-      if (field === 'ingresos' || field === 'saldoAhorro') {
+      if (protectedFields.includes(field)) {
         ui.editingField = field;
-        // Cancelar cualquier save/render pendiente para que nada toque el DOM
         if (ui.saveTimer) { clearTimeout(ui.saveTimer); ui.saveTimer = null; }
         if (ui.syncTimer) { clearTimeout(ui.syncTimer); ui.syncTimer = null; }
       }
@@ -764,9 +777,8 @@
 
     document.addEventListener('focusout', (e) => {
       const field = e.target.getAttribute('data-field');
-      if (field === 'ingresos' || field === 'saldoAhorro') {
+      if (protectedFields.includes(field)) {
         ui.editingField = null;
-        // Ahora que salió del campo: guardar y re-renderizar
         saveNow();
         render();
       }
