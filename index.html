@@ -31,6 +31,9 @@
     .date-selector { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
     .select, .input { padding: 0.5rem 1rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; }
     .input-sm { width: 5rem; }
+    .period-row { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB; font-size: 0.875rem; color: #374151; flex-wrap: wrap; }
+    .period-row label { font-weight: 600; }
+    .input-day { width: 3.5rem; padding: 0.35rem 0.5rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; text-align: center; font-size: 0.875rem; }
 
     .grid { display: grid; gap: 1rem; }
     @media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
@@ -198,6 +201,8 @@
         { id: 10, categoria: 'Ahorro', presupuesto: 250, pagado: false }
       ],
       gastosVariables: [],
+      diaInicio: 1,
+      diaFin: 0,       // 0 = último día del mes
       mesActual: new Date().getMonth(),
       añoActual: new Date().getFullYear(),
       editingFijo: null,
@@ -238,21 +243,42 @@
       const ingresos = Number(state.ingresos)||0;
       const resto = ingresos - totalGastosFijos;
 
-      const diasMes = new Date(state.añoActual, state.mesActual + 1, 0).getDate();
-      const presupuestoRestante = resto - totalGastosVariables;
+      // Período personalizado
+      const di = Number(state.diaInicio) || 1;
+      const ultimoDiaMes = new Date(state.añoActual, state.mesActual + 1, 0).getDate();
+      const df = (Number(state.diaFin) || 0) === 0 ? ultimoDiaMes : Number(state.diaFin);
+
+      let fechaInicio, fechaFin;
+      if (di <= df) {
+        // Mismo mes: ej. del 1 al 28, del 5 al 25
+        fechaInicio = new Date(state.añoActual, state.mesActual, di);
+        fechaFin = new Date(state.añoActual, state.mesActual, df);
+      } else {
+        // Cruza al mes siguiente: ej. del 25 al 24 = día 25 de este mes al 24 del siguiente
+        fechaInicio = new Date(state.añoActual, state.mesActual, di);
+        fechaFin = new Date(state.añoActual, state.mesActual + 1, df);
+      }
 
       const hoy = new Date();
-      const diaActual = hoy.getDate();
-      const diasRestantes = diasMes - diaActual;
+      hoy.setHours(0,0,0,0);
+      fechaInicio.setHours(0,0,0,0);
+      fechaFin.setHours(0,0,0,0);
 
-      const gastoPromedioDiario = diaActual > 0 ? totalGastosVariables / diaActual : 0;
+      const diasMes = Math.round((fechaFin - fechaInicio) / 86400000) + 1;
+      const diasTranscurridos = Math.max(1, Math.min(diasMes, Math.round((hoy - fechaInicio) / 86400000) + 1));
+      const diasRestantes = Math.max(0, diasMes - diasTranscurridos);
+
+      const presupuestoRestante = resto - totalGastosVariables;
+      const gastoPromedioDiario = diasTranscurridos > 0 ? totalGastosVariables / diasTranscurridos : 0;
       const proyeccionFinMes = totalGastosVariables + (gastoPromedioDiario * diasRestantes);
       const diferenciaPrevista = resto - proyeccionFinMes;
 
       const estadoProyeccion = diferenciaPrevista >= 0 ? 'bien' : (diferenciaPrevista >= -100 ? 'ajustado' : 'peligro');
       const porcentajeGastado = resto > 0 ? (totalGastosVariables / resto) * 100 : 0;
 
-      return { resto, diasMes, presupuestoRestante, diasRestantes, gastoPromedioDiario, proyeccionFinMes, diferenciaPrevista, estadoProyeccion, porcentajeGastado };
+      const diaFinReal = df; // para mostrar en UI
+
+      return { resto, diasMes, presupuestoRestante, diasRestantes, gastoPromedioDiario, proyeccionFinMes, diferenciaPrevista, estadoProyeccion, porcentajeGastado, diaFinReal };
     }
 
     function scheduleSave() {
@@ -285,6 +311,8 @@
           ingresos: Number(state.ingresos)||0,
           gastosFijos: state.gastosFijos,
           saldoAhorro: Number(state.saldoAhorro)||0,
+          diaInicio: Number(state.diaInicio)||1,
+          diaFin: Number(state.diaFin)||0,
           historico: nuevoHistorico,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -352,6 +380,11 @@
 
                   <input class="select input-sm" type="number" data-field="añoActual" value="${state.añoActual}" />
                 </div>
+              </div>
+              <div class="period-row">
+                <label>Período:</label>
+                del día <input class="input-day" type="number" min="1" max="31" data-field="diaInicio" value="${state.diaInicio}" />
+                al día <input class="input-day" type="number" min="1" max="31" data-field="diaFin" value="${b.diaFinReal}" />
               </div>
             </div>
 
@@ -667,6 +700,16 @@
         state.saldoAhorro = Number(el.value || 0);
         return;
       }
+      if (field === 'diaInicio') {
+        ui.editingField = 'diaInicio';
+        state.diaInicio = Number(el.value || 1);
+        return;
+      }
+      if (field === 'diaFin') {
+        ui.editingField = 'diaFin';
+        state.diaFin = Number(el.value || 0);
+        return;
+      }
       if (field === 'añoActual') {
         state.añoActual = Number(el.value || new Date().getFullYear());
         const key = getMesKey();
@@ -708,11 +751,12 @@
     });
 
     // ===== Focus/Blur: proteger inputs durante escritura =====
+    const protectedFields = ['ingresos', 'saldoAhorro', 'diaInicio', 'diaFin'];
+
     document.addEventListener('focusin', (e) => {
       const field = e.target.getAttribute('data-field');
-      if (field === 'ingresos' || field === 'saldoAhorro') {
+      if (protectedFields.includes(field)) {
         ui.editingField = field;
-        // Cancelar cualquier save/render pendiente para que nada toque el DOM
         if (ui.saveTimer) { clearTimeout(ui.saveTimer); ui.saveTimer = null; }
         if (ui.syncTimer) { clearTimeout(ui.syncTimer); ui.syncTimer = null; }
       }
@@ -720,9 +764,8 @@
 
     document.addEventListener('focusout', (e) => {
       const field = e.target.getAttribute('data-field');
-      if (field === 'ingresos' || field === 'saldoAhorro') {
+      if (protectedFields.includes(field)) {
         ui.editingField = null;
-        // Ahora que salió del campo: guardar y re-renderizar
         saveNow();
         render();
       }
@@ -751,6 +794,8 @@
 
           state.ingresos = (typeof data.ingresos === 'number') ? data.ingresos : state.ingresos;
           state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
+          state.diaInicio = (typeof data.diaInicio === 'number') ? data.diaInicio : state.diaInicio;
+          state.diaFin = (typeof data.diaFin === 'number') ? data.diaFin : state.diaFin;
           if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
 
           state.historico = (data.historico && typeof data.historico === 'object') ? data.historico : {};
