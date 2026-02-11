@@ -746,22 +746,22 @@
         const mesData = state.historico?.[key];
         state.gastosVariables = Array.isArray(mesData?.gastosVariables) ? mesData.gastosVariables : [];
         render();
-        scheduleSave();
+        saveNow();
       }
       if (field === 'diaInicio') {
         state.diaInicio = Number(el.value || 1);
         render();
-        scheduleSave();
+        saveNow();
       }
       if (field === 'diaFin') {
         state.diaFin = Number(el.value || 0);
         render();
-        scheduleSave();
+        saveNow();
       }
       if (field === 'mesFin') {
         state.mesFin = Number(el.value || 0);
         render();
-        scheduleSave();
+        saveNow();
       }
     });
 
