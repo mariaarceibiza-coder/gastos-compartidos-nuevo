@@ -184,6 +184,7 @@
 
     // ===== Estado app =====
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const mesesCortos = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
     const state = {
       ingresos: 3350,
@@ -204,6 +205,7 @@
       diaInicio: 1,
       diaFin: 0,       // 0 = último día del mes
       mesActual: new Date().getMonth(),
+      mesFin: new Date().getMonth(),
       añoActual: new Date().getFullYear(),
       editingFijo: null,
       nuevoGasto: { fecha: '', monto: '', descripcion: '' },
@@ -239,46 +241,43 @@
     }
 
     function budget() {
-      const { totalGastosFijos, totalGastosVariables } = totals();
+      const { totalGastosFijos, totalGastosVariables, pagados, pendientes } = totals();
       const ingresos = Number(state.ingresos)||0;
-      const resto = ingresos - totalGastosFijos;
 
-      // Período personalizado
+      // CLAVE: solo descontar gastos fijos PAGADOS (saldo real de la cuenta)
+      const gastadoTotal = pagados + totalGastosVariables;
+      const saldoReal = ingresos - gastadoTotal;
+
+      // Período personalizado con mes inicio y mes fin
       const di = Number(state.diaInicio) || 1;
-      const ultimoDiaMes = new Date(state.añoActual, state.mesActual + 1, 0).getDate();
-      const df = (Number(state.diaFin) || 0) === 0 ? ultimoDiaMes : Number(state.diaFin);
+      const dfRaw = Number(state.diaFin) || 0;
+      const ultimoDiaMesFin = new Date(state.añoActual, state.mesFin + 1, 0).getDate();
+      const df = dfRaw === 0 ? ultimoDiaMesFin : dfRaw;
 
-      let fechaInicio, fechaFin;
-      if (di < df) {
-        // Mismo mes: ej. del 1 al 28
-        fechaInicio = new Date(state.añoActual, state.mesActual, di);
-        fechaFin = new Date(state.añoActual, state.mesActual, df);
-      } else {
-        // Cruza al mes siguiente: ej. del 26 al 26 o del 26 al 25
-        fechaInicio = new Date(state.añoActual, state.mesActual, di);
-        fechaFin = new Date(state.añoActual, state.mesActual + 1, df);
-      }
+      let añoFin = state.añoActual;
+      if (state.mesFin < state.mesActual) añoFin++;
 
+      const fechaInicio = new Date(state.añoActual, state.mesActual, di);
+      const fechaFin = new Date(añoFin, state.mesFin, df);
       const hoy = new Date();
       hoy.setHours(0,0,0,0);
       fechaInicio.setHours(0,0,0,0);
       fechaFin.setHours(0,0,0,0);
 
-      const diasMes = Math.round((fechaFin - fechaInicio) / 86400000) + 1;
+      const diasMes = Math.max(1, Math.round((fechaFin - fechaInicio) / 86400000) + 1);
       const diasTranscurridos = Math.max(1, Math.min(diasMes, Math.round((hoy - fechaInicio) / 86400000) + 1));
       const diasRestantes = Math.max(0, diasMes - diasTranscurridos);
 
-      const presupuestoRestante = resto - totalGastosVariables;
+      // Proyección basada en gasto variable diario
       const gastoPromedioDiario = diasTranscurridos > 0 ? totalGastosVariables / diasTranscurridos : 0;
-      const proyeccionFinMes = totalGastosVariables + (gastoPromedioDiario * diasRestantes);
-      const diferenciaPrevista = resto - proyeccionFinMes;
+      const proyeccionVariables = totalGastosVariables + (gastoPromedioDiario * diasRestantes);
+      const presupuestoParaVariables = ingresos - totalGastosFijos;
+      const diferenciaPrevista = presupuestoParaVariables - proyeccionVariables;
 
       const estadoProyeccion = diferenciaPrevista >= 0 ? 'bien' : (diferenciaPrevista >= -100 ? 'ajustado' : 'peligro');
-      const porcentajeGastado = resto > 0 ? (totalGastosVariables / resto) * 100 : 0;
+      const porcentajeGastado = ingresos > 0 ? (gastadoTotal / ingresos) * 100 : 0;
 
-      const diaFinReal = df; // para mostrar en UI
-
-      return { resto, diasMes, presupuestoRestante, diasRestantes, gastoPromedioDiario, proyeccionFinMes, diferenciaPrevista, estadoProyeccion, porcentajeGastado, diaFinReal };
+      return { ingresos, saldoReal, gastadoTotal, pagados, pendientes, totalGastosVariables, totalGastosFijos, presupuestoParaVariables, diasMes, diasRestantes, gastoPromedioDiario, proyeccionVariables, diferenciaPrevista, estadoProyeccion, porcentajeGastado };
     }
 
     function scheduleSave() {
@@ -313,6 +312,7 @@
           saldoAhorro: Number(state.saldoAhorro)||0,
           diaInicio: Number(state.diaInicio)||1,
           diaFin: Number(state.diaFin)||0,
+          mesFin: Number(state.mesFin)||0,
           historico: nuevoHistorico,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -331,7 +331,6 @@
       if (ui.editingField) return;
 
       const root = document.getElementById('root');
-      const t = totals();
       const b = budget();
 
       if (state.loading) {
@@ -373,22 +372,27 @@
                 </div>
                 <div class="date-selector">
                   <button class="btn btn-small btn-secondary" data-action="open-historico">📊 Histórico</button>
-
-                  <select class="select" data-field="mesActual">
-                    ${meses.map((m, i) => `<option value="${i}" ${i===state.mesActual ? 'selected':''}>${m}</option>`).join('')}
-                  </select>
-
                   <input class="select input-sm" type="number" data-field="añoActual" value="${state.añoActual}" />
                 </div>
               </div>
               <div class="period-row">
                 <label>Período:</label>
-                del día <select class="input-day" data-field="diaInicio">
+                del
+                <select class="input-day" data-field="diaInicio">
                   ${Array.from({length:31},(_,i)=>i+1).map(d => `<option value="${d}" ${d===state.diaInicio?'selected':''}>${d}</option>`).join('')}
                 </select>
-                al día <select class="input-day" data-field="diaFin">
-                  <option value="0" ${state.diaFin===0?'selected':''}>Fin de mes</option>
+                de
+                <select class="input-day" data-field="mesActual">
+                  ${mesesCortos.map((m, i) => `<option value="${i}" ${i===state.mesActual?'selected':''}>${m}</option>`).join('')}
+                </select>
+                al
+                <select class="input-day" data-field="diaFin">
+                  <option value="0" ${state.diaFin===0?'selected':''}>Último</option>
                   ${Array.from({length:31},(_,i)=>i+1).map(d => `<option value="${d}" ${d===state.diaFin?'selected':''}>${d}</option>`).join('')}
+                </select>
+                de
+                <select class="input-day" data-field="mesFin">
+                  ${mesesCortos.map((m, i) => `<option value="${i}" ${i===state.mesFin?'selected':''}>${m}</option>`).join('')}
                 </select>
               </div>
             </div>
@@ -407,13 +411,13 @@
                       <div class="text-sm">
                         <div><strong>Días restantes:</strong> ${b.diasRestantes} días</div>
                         <div><strong>Gasto promedio:</strong> ${b.gastoPromedioDiario.toFixed(2)} €/día</div>
-                        <div><strong>Proyección:</strong> ${b.proyeccionFinMes.toFixed(2)} €</div>
+                        <div><strong>Proyección g. variables:</strong> ${b.proyeccionVariables.toFixed(2)} €</div>
                         <div style="margin-top:0.5rem;font-weight:bold">
                           ${b.diferenciaPrevista >= 0 ? `Te sobrarán ${b.diferenciaPrevista.toFixed(2)} €` : `Te faltarán ${Math.abs(b.diferenciaPrevista).toFixed(2)} €`}
                         </div>
                         ${(b.estadoProyeccion !== 'bien' && b.diasRestantes > 0) ? `
                           <div class="text-sm" style="margin-top:0.5rem">
-                            💡 Máximo ${(b.presupuestoRestante / b.diasRestantes).toFixed(2)} €/día
+                            💡 Máximo ${((b.presupuestoParaVariables - b.totalGastosVariables) / b.diasRestantes).toFixed(2)} €/día
                           </div>` : ``}
                       </div>
                     </div>
@@ -432,16 +436,16 @@
 
                 <div class="stats">
                   <div class="stat-box blue">
-                    <div class="stat-label">Presupuesto</div>
-                    <div class="stat-value" style="color:#2563EB">${fmt2(b.resto)} €</div>
+                    <div class="stat-label">Ingresos</div>
+                    <div class="stat-value" style="color:#2563EB">${fmt2(b.ingresos)} €</div>
                   </div>
                   <div class="stat-box red">
-                    <div class="stat-label">Gastado</div>
-                    <div class="stat-value text-red">${fmt2(t.totalGastosVariables)} €</div>
+                    <div class="stat-label">Gastado (fijos + variables)</div>
+                    <div class="stat-value text-red">${fmt2(b.gastadoTotal)} €</div>
                   </div>
                   <div class="stat-box green full">
-                    <div class="stat-label">Restante</div>
-                    <div class="stat-value text-green" style="font-size:2rem">${fmt2(b.presupuestoRestante)} €</div>
+                    <div class="stat-label">Saldo real</div>
+                    <div class="stat-value text-green" style="font-size:2rem">${fmt2(b.saldoReal)} €</div>
                   </div>
                 </div>
 
@@ -479,15 +483,15 @@
                 <div class="summary">
                   <div class="summary-row">
                     <span class="summary-label">Total gastos fijos</span>
-                    <span class="summary-value">${fmt2(t.totalGastosFijos)} €</span>
+                    <span class="summary-value">${fmt2(b.totalGastosFijos)} €</span>
                   </div>
                   <div class="summary-row">
-                    <span class="summary-label text-green">Pagado</span>
-                    <span class="summary-value text-green">${fmt2(t.pagados)} €</span>
+                    <span class="summary-label text-green">Pagado (descontado)</span>
+                    <span class="summary-value text-green">${fmt2(b.pagados)} €</span>
                   </div>
                   <div class="summary-row">
-                    <span class="summary-label text-red">Pendiente</span>
-                    <span class="summary-value text-red">${fmt2(t.pendientes)} €</span>
+                    <span class="summary-label text-orange">Pendiente de pago</span>
+                    <span class="summary-value text-orange">${fmt2(b.pendientes)} €</span>
                   </div>
                 </div>
 
@@ -753,6 +757,11 @@
         render();
         scheduleSave();
       }
+      if (field === 'mesFin') {
+        state.mesFin = Number(el.value || 0);
+        render();
+        scheduleSave();
+      }
     });
 
     // ===== Focus/Blur: proteger inputs durante escritura =====
@@ -801,6 +810,7 @@
           state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
           state.diaInicio = (typeof data.diaInicio === 'number') ? data.diaInicio : state.diaInicio;
           state.diaFin = (typeof data.diaFin === 'number') ? data.diaFin : state.diaFin;
+          state.mesFin = (typeof data.mesFin === 'number') ? data.mesFin : state.mesFin;
           if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
 
           state.historico = (data.historico && typeof data.historico === 'object') ? data.historico : {};
