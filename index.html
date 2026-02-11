@@ -312,6 +312,7 @@
           saldoAhorro: Number(state.saldoAhorro)||0,
           diaInicio: Number(state.diaInicio)||1,
           diaFin: Number(state.diaFin)||0,
+          mesActual: state.mesActual,
           mesFin: Number(state.mesFin)||0,
           historico: nuevoHistorico,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -810,6 +811,7 @@
           state.saldoAhorro = (typeof data.saldoAhorro === 'number') ? data.saldoAhorro : state.saldoAhorro;
           state.diaInicio = (typeof data.diaInicio === 'number') ? data.diaInicio : state.diaInicio;
           state.diaFin = (typeof data.diaFin === 'number') ? data.diaFin : state.diaFin;
+          if (typeof data.mesActual === 'number') state.mesActual = data.mesActual;
           state.mesFin = (typeof data.mesFin === 'number') ? data.mesFin : state.mesFin;
           if (Array.isArray(data.gastosFijos)) state.gastosFijos = data.gastosFijos;
 
