@@ -1,445 +1,1725 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Gestor de Gastos</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: system-ui, -apple-system, sans-serif; }
-        .bg-gradient { background: linear-gradient(135deg, #EFF6FF 0%, #E0E7FF 100%); min-height: 100vh; padding: 1rem; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1rem; }
-        .header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
-        .header-title { display: flex; align-items: center; gap: 1rem; }
-        .icon-box { background: #4F46E5; padding: 0.75rem; border-radius: 0.75rem; color: white; }
-        .title { font-size: 1.5rem; font-weight: bold; color: #1F2937; }
-        .subtitle { font-size: 0.875rem; color: #6B7280; }
-        .date-selector { display: flex; gap: 0.5rem; align-items: center; }
-        .select, .input { padding: 0.5rem 1rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; font-weight: 600; }
-        .input-sm { width: 5rem; }
-        .grid { display: grid; gap: 1rem; }
-        @media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-        .section-title { font-size: 1.125rem; font-weight: bold; color: #1F2937; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
-        .green-box { background: #F0FDF4; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
-        .purple-box { background: #FAF5FF; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 2px solid #E9D5FF; }
-        .label { display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
-        .input-full { width: 100%; padding: 0.5rem 1rem; border: 2px solid #86EFAC; border-radius: 0.5rem; font-size: 1.125rem; font-weight: bold; }
-        .input-purple { width: 100%; padding: 0.5rem 1rem; border: 2px solid #C084FC; border-radius: 0.5rem; font-size: 1.125rem; font-weight: bold; }
-        .gasto-list { max-height: 24rem; overflow-y: auto; margin-bottom: 1rem; }
-        .gasto-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 0.5rem; }
-        .gasto-item:hover { background: #F9FAFB; }
-        .gasto-item.pagado { background: #F0FDF4; }
-        .checkbox { width: 1.25rem; height: 1.25rem; cursor: pointer; }
-        .gasto-text { flex: 1; font-size: 0.875rem; color: #374151; }
-        .gasto-text.pagado { text-decoration: line-through; color: #9CA3AF; }
-        .gasto-amount { font-weight: 600; font-size: 0.875rem; color: #1F2937; white-space: nowrap; }
-        .gasto-amount.pagado { color: #16A34A; }
-        .btn-icon { padding: 0.25rem; cursor: pointer; border: none; background: transparent; border-radius: 0.25rem; }
-        .btn-icon:hover { background: #F3F4F6; }
-        .btn { width: 100%; padding: 0.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .btn-small { padding: 0.5rem 1rem; width: auto; font-size: 0.875rem; }
-        .btn-add { background: #E0E7FF; color: #4F46E5; }
-        .btn-add:hover { background: #C7D2FE; }
-        .btn-primary { background: #4F46E5; color: white; }
-        .btn-primary:hover { background: #4338CA; }
-        .btn-secondary { background: #E5E7EB; color: #374151; }
-        .btn-secondary:hover { background: #D1D5DB; }
-        .summary { border-top: 2px solid #E5E7EB; padding-top: 1rem; margin-top: 1.5rem; }
-        .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-        .summary-label { color: #374151; font-weight: bold; }
-        .summary-value { font-weight: bold; }
-        .text-red { color: #DC2626; }
-        .text-green { color: #16A34A; }
-        .text-orange { color: #EA580C; }
-        .text-blue { color: #2563EB; }
-        .text-purple { color: #9333EA; }
-        .text-sm { font-size: 0.75rem; }
-        .text-base { font-size: 1rem; }
-        .text-lg { font-size: 1.125rem; }
-        .text-xl { font-size: 1.25rem; }
-        .daily-box { background: #EEF2FF; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; }
-        .alert { padding: 1rem; border-radius: 0.5rem; border: 2px solid; margin-bottom: 1.5rem; }
-        .alert-green { background: #F0FDF4; border-color: #86EFAC; }
-        .alert-orange { background: #FFF7ED; border-color: #FED7AA; }
-        .alert-red { background: #FEF2F2; border-color: #FCA5A5; }
-        .alert-content { display: flex; gap: 0.75rem; }
-        .alert-icon { padding: 0.5rem; border-radius: 9999px; font-size: 1.25rem; flex-shrink: 0; }
-        .alert-icon.green { background: #BBF7D0; }
-        .alert-icon.orange { background: #FED7AA; }
-        .alert-icon.red { background: #FCA5A5; }
-        .alert-title { font-weight: bold; margin-bottom: 0.5rem; }
-        .progress-bar { width: 100%; background: #E5E7EB; border-radius: 9999px; height: 1.25rem; overflow: hidden; margin-bottom: 1.5rem; }
-        .progress-fill { height: 100%; transition: width 0.5s; }
-        .bg-green-500 { background: #22C55E; }
-        .bg-orange-500 { background: #F97316; }
-        .bg-red-500 { background: #EF4444; }
-        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-        .stat-box { padding: 0.75rem; border-radius: 0.5rem; }
-        .stat-box.blue { background: #EFF6FF; }
-        .stat-box.red { background: #FEF2F2; }
-        .stat-box.green { background: #F0FDF4; }
-        .stat-box.purple { background: #FAF5FF; }
-        .stat-box.full { grid-column: span 2; }
-        .stat-label { font-size: 0.75rem; color: #6B7280; margin-bottom: 0.25rem; }
-        .stat-value { font-size: 1.5rem; font-weight: bold; }
-        .form-box { background: #EEF2FF; padding: 1rem; border-radius: 0.5rem; }
-        .form-title { font-weight: 600; color: #312E81; margin-bottom: 0.75rem; }
-        .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
-        .input-form { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #C7D2FE; border-radius: 0.5rem; }
-        table { width: 100%; }
-        th { text-align: left; padding: 0.5rem; font-weight: 600; color: #374151; font-size: 0.875rem; border-bottom: 2px solid #E5E7EB; }
-        td { padding: 0.5rem; font-size: 0.875rem; border-bottom: 1px solid #F3F4F6; }
-        tr:hover { background: #F9FAFB; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .empty-state { text-align: center; color: #6B7280; padding: 2rem; }
-        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-        .modal-content { background: white; border-radius: 1rem; padding: 1.5rem; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .modal-title { font-size: 1.25rem; font-weight: bold; color: #1F2937; }
-        .btn-close { background: #F3F4F6; border: none; border-radius: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 1.25rem; }
-        .btn-close:hover { background: #E5E7EB; }
-        .historico-item { padding: 1rem; border: 2px solid #E5E7EB; border-radius: 0.5rem; margin-bottom: 0.75rem; cursor: pointer; }
-        .historico-item:hover { border-color: #C7D2FE; background: #F9FAFB; }
-        .historico-mes { font-weight: bold; color: #1F2937; margin-bottom: 0.5rem; }
-        .historico-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.875rem; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Hogar · Gastos Familiares</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --g900: #0D2B18;
+      --g800: #163D26;
+      --g700: #1C5030;
+      --g600: #246B3E;
+      --g500: #2E8B52;
+      --g400: #45A868;
+      --lime: #B8F04A;
+      --lime-soft: #D4F87A;
+      --coral: #E85B4B;
+      --coral-soft: #FFE8E5;
+      --amber: #F59E0B;
+      --amber-soft: #FFF3CD;
+      --cream: #F6F1E8;
+      --cream2: #EDE8DC;
+      --cream3: #DDD7C8;
+      --white: #FFFFFF;
+      --t900: #1A1A1A;
+      --t700: #3D3D3D;
+      --t500: #6B6B6B;
+      --t300: #ABABAB;
+      --radius: 20px;
+      --shadow: 0 2px 14px rgba(0,0,0,0.07);
+      --font-d: Georgia, 'Times New Roman', serif;
+      --font-b: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --vh: 1vh;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html, body { height:100%; background:var(--cream); overflow:hidden; }
+    body { font-family:var(--font-b); color:var(--t900); }
+
+    /* ─── APP SHELL ─── */
+    .app { display:flex; flex-direction:column; height:calc(var(--vh)*100); max-width:430px; margin:0 auto; position:relative; }
+    .content { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding-top:var(--safe-t); padding-bottom:calc(64px + var(--safe-b)); }
+    .tab-screen { display:none; }
+    .tab-screen.active { display:block; }
+
+    /* ─── NAV ─── */
+    .bottom-nav {
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+      width:100%; max-width:430px;
+      background:var(--white); border-top:1px solid var(--cream2);
+      display:flex; align-items:stretch;
+      height:calc(58px + var(--safe-b)); padding-bottom:var(--safe-b);
+      z-index:100; box-shadow:0 -4px 24px rgba(0,0,0,0.07);
+    }
+    .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border:none; background:transparent; cursor:pointer; padding:6px 0; }
+    .nav-icon { font-size:19px; line-height:1; transition:transform .15s; }
+    .nav-label { font-size:10px; font-weight:500; color:var(--t300); transition:color .15s; letter-spacing:.01em; }
+    .nav-btn.active .nav-label { color:var(--g600); font-weight:700; }
+    .nav-btn.active .nav-icon { transform:scale(1.1); }
+
+    /* ─── CARDS ─── */
+    .card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; margin:0 14px 10px; }
+    .card-dark {
+      background:var(--g600); border-radius:var(--radius); padding:22px 18px;
+      margin:0 14px 10px; color:white; position:relative; overflow:hidden;
+    }
+    .card-dark::before { content:''; position:absolute; top:-50px; right:-50px; width:180px; height:180px; background:var(--g700); border-radius:50%; opacity:.5; }
+    .card-dark::after  { content:''; position:absolute; bottom:-30px; right:30px; width:110px; height:110px; background:var(--g500); border-radius:50%; opacity:.4; }
+    .card-content { position:relative; z-index:1; }
+    .card-lime { background:var(--lime); border-radius:var(--radius); padding:18px; margin:0 14px 10px; }
+
+    /* ─── TYPE ─── */
+    .d-xl  { font-family:var(--font-d); font-size:42px; font-weight:normal; line-height:1; letter-spacing:-1.5px; }
+    .d-lg  { font-family:var(--font-d); font-size:28px; font-weight:normal; line-height:1.1; }
+    .d-md  { font-family:var(--font-d); font-size:22px; font-weight:normal; }
+    .overline { font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--t500); }
+    .overline-w { font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; opacity:.65; }
+
+    /* ─── BADGES ─── */
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; }
+    .b-lime   { background:var(--lime); color:var(--g800); }
+    .b-coral  { background:var(--coral-soft); color:var(--coral); }
+    .b-amber  { background:var(--amber-soft); color:#92400E; }
+    .b-white  { background:rgba(255,255,255,.18); color:white; }
+    .b-green  { background:rgba(255,255,255,.1); color:white; }
+
+    /* ─── PROGRESS ─── */
+    .track { height:8px; background:var(--cream2); border-radius:999px; overflow:hidden; }
+    .track-sm { height:5px; background:var(--cream2); border-radius:999px; overflow:hidden; }
+    .fill { height:100%; border-radius:999px; transition:width .6s ease; }
+    .fill-green { background:var(--g600); }
+    .fill-lime  { background:var(--lime); }
+    .fill-coral { background:var(--coral); }
+    .fill-amber { background:var(--amber); }
+    .fill-grad  { background:linear-gradient(90deg, var(--lime), var(--g600)); }
+
+    /* ─── BUTTONS ─── */
+    .btn { border:none; border-radius:14px; font-family:var(--font-b); font-weight:600; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+    .btn:active { transform:scale(.96); }
+    .btn-green  { background:var(--g600); color:white; padding:14px 22px; font-size:14px; }
+    .btn-green:hover { background:var(--g700); }
+    .btn-lime   { background:var(--lime); color:var(--g800); padding:14px 22px; font-size:14px; flex:1; }
+    .btn-cream  { background:var(--cream2); color:var(--t700); padding:14px 22px; font-size:14px; flex:1; }
+    .btn-ghost  { background:transparent; color:var(--g600); padding:7px 14px; font-size:12px; font-weight:700; border:1.5px solid var(--g600); border-radius:999px; }
+    .btn-xs     { padding:6px 14px; font-size:12px; border-radius:999px; }
+    .btn-w100   { width:100%; }
+
+    /* ─── LAYOUT ─── */
+    .flex-bc { display:flex; justify-content:space-between; align-items:center; }
+    .flex-c  { display:flex; align-items:center; }
+    .flex-col { display:flex; flex-direction:column; }
+    .gap-8   { gap:8px; }
+    .gap-10  { gap:10px; }
+    .gap-12  { gap:12px; }
+    .mt-4  { margin-top:4px; }
+    .mt-8  { margin-top:8px; }
+    .mt-12 { margin-top:12px; }
+    .mt-16 { margin-top:16px; }
+    .mb-8  { margin-bottom:8px; }
+    .mb-12 { margin-bottom:12px; }
+    .p14   { padding:0 14px; }
+
+    /* ─── SECTION HEADER ─── */
+    .screen-header { padding:calc(var(--safe-t) + 18px) 14px 8px; }
+    .sec-divider { padding:16px 14px 8px; display:flex; justify-content:space-between; align-items:center; }
+    .sec-title { font-size:15px; font-weight:700; }
+    .sec-action { font-size:12px; font-weight:600; color:var(--g600); }
+
+    /* ─── AVATARS ─── */
+    .avatar { width:26px; height:26px; border-radius:50%; border:2px solid var(--white); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:white; }
+    .avatar:not(:first-child) { margin-left:-5px; }
+    .avatar-lg { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:white; flex-shrink:0; }
+
+    /* ─── LIST ITEMS ─── */
+    .fijo-item { display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--white); border-radius:13px; margin-bottom:7px; transition:background .15s; }
+    .fijo-item.paid { background:#F0FBF5; }
+    .check-ring { width:22px; height:22px; border-radius:50%; border:2px solid var(--cream3); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all .15s; font-size:11px; }
+    .check-ring.on { background:var(--g600); border-color:var(--g600); color:white; }
+
+    .tx-item { display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--white); border-radius:13px; margin-bottom:7px; }
+    .tx-ico  { width:36px; height:36px; background:var(--cream); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .tx-name { font-size:14px; font-weight:600; line-height:1.2; }
+    .tx-meta { font-size:11px; color:var(--t500); }
+    .tx-amt  { font-size:14px; font-weight:700; }
+
+    /* ─── ALERT CARDS ─── */
+    .alert-row { display:flex; align-items:flex-start; gap:10px; padding:12px; border-radius:13px; margin-bottom:8px; }
+    .alert-row.warn  { background:#FFFAEB; border-left:3px solid var(--amber); }
+    .alert-row.danger{ background:#FFF4F3; border-left:3px solid var(--coral); }
+    .alert-row.ok    { background:#F0FBF5; border-left:3px solid var(--g600); }
+    .alert-em { font-size:17px; flex-shrink:0; margin-top:1px; }
+    .alert-title { font-size:13px; font-weight:700; margin-bottom:2px; }
+    .alert-body  { font-size:12px; color:var(--t500); line-height:1.4; }
+
+    /* ─── GOAL ITEMS ─── */
+    .goal-item { background:var(--white); border-radius:16px; padding:16px; margin-bottom:10px; }
+    .goal-pct { font-size:18px; font-weight:800; }
+    .goal-pct.on  { color:var(--g600); }
+    .goal-pct.off { color:var(--coral); }
+
+    /* ─── COACH ─── */
+    .coach-card { background:var(--g600); border-radius:var(--radius); padding:20px; margin:0 14px 10px; color:white; position:relative; overflow:hidden; }
+    .coach-card::before { content:'🌿'; position:absolute; top:14px; right:16px; font-size:36px; opacity:.15; }
+    .coach-label { font-size:10px; font-weight:700; letter-spacing:.1em; opacity:.65; text-transform:uppercase; margin-bottom:6px; }
+    .coach-text  { font-family:var(--font-d); font-size:18px; line-height:1.45; }
+    .coach-text em  { color:var(--lime); font-style:normal; }
+    .coach-sub   { font-size:12px; opacity:.75; margin-top:8px; line-height:1.5; }
+
+    /* ─── CHART ─── */
+    .bar-chart { display:flex; align-items:flex-end; justify-content:space-between; height:110px; gap:5px; }
+    .bar-col   { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+    .bar-val   { font-size:9px; color:var(--t500); min-height:12px; text-align:center; line-height:1; }
+    .bar-fill  { width:100%; border-radius:5px 5px 0 0; transition:height .5s ease; }
+    .bar-lbl   { font-size:10px; color:var(--t500); }
+    .bar-lbl.now { color:var(--g600); font-weight:700; }
+
+    /* ─── DONUT ─── */
+    .donut-wrap { display:flex; align-items:center; gap:16px; }
+    .legend     { flex:1; display:flex; flex-direction:column; gap:7px; }
+    .legend-row { display:flex; align-items:center; justify-content:space-between; font-size:12px; }
+    .legend-dot { width:8px; height:8px; border-radius:50%; margin-right:6px; flex-shrink:0; }
+
+    /* ─── BREAKDOWN ─── */
+    .bk-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--cream2); }
+    .bk-item:last-child { border:none; }
+    .bk-ico  { font-size:20px; width:34px; text-align:center; }
+    .bk-info { flex:1; }
+    .bk-name { font-size:13px; font-weight:600; margin-bottom:4px; }
+    .bk-pct  { font-size:11px; color:var(--t300); text-align:right; }
+
+    /* ─── MODAL SHEET ─── */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:200; display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .overlay.open { opacity:1; pointer-events:all; }
+    .sheet { background:var(--cream); width:100%; max-width:430px; margin:0 auto; border-radius:24px 24px 0 0; padding-bottom:calc(20px + var(--safe-b)); transform:translateY(100%); transition:transform .3s cubic-bezier(.34,1.4,.64,1); max-height:90vh; overflow-y:auto; }
+    .overlay.open .sheet { transform:translateY(0); }
+    .handle { width:38px; height:4px; background:var(--cream3); border-radius:999px; margin:12px auto 18px; }
+    .sheet-header { padding:0 18px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+
+    /* ─── ADD EXPENSE FORM ─── */
+    .amount-big { font-family:var(--font-d); font-size:52px; letter-spacing:-2px; text-align:center; padding:10px 18px 4px; line-height:1; }
+    .cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; padding:0 14px; margin-bottom:16px; }
+    .cat-btn { background:var(--white); border:2px solid transparent; border-radius:13px; padding:11px 5px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; transition:all .15s; }
+    .cat-btn:active { transform:scale(.93); }
+    .cat-btn.sel { background:var(--g600); border-color:var(--g600); }
+    .cat-btn.sel .cat-lbl { color:white; }
+    .cat-ico { font-size:21px; }
+    .cat-lbl { font-size:10px; font-weight:600; color:var(--t500); }
+    .form-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--t500); margin-bottom:7px; display:block; }
+    .form-in { width:100%; padding:11px 14px; background:var(--white); border:1.5px solid var(--cream3); border-radius:12px; font-size:15px; font-family:var(--font-b); color:var(--t900); outline:none; }
+    .form-in:focus { border-color:var(--g600); }
+    .form-sec { padding:0 14px; margin-bottom:14px; }
+
+    /* ─── LOADING ─── */
+    .loading-screen { position:fixed; inset:0; background:var(--g600); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:999; transition:opacity .4s ease; }
+    .loading-screen.fade { opacity:0; pointer-events:none; }
+    .ld-title { font-family:var(--font-d); font-size:30px; color:white; margin:10px 0 4px; }
+    .ld-sub   { font-size:13px; color:rgba(255,255,255,.55); }
+    .dots { display:flex; gap:6px; margin-top:22px; }
+    .dot  { width:6px; height:6px; border-radius:50%; background:var(--lime); animation:bounce .8s ease-in-out infinite; }
+    .dot:nth-child(2){ animation-delay:.15s; }
+    .dot:nth-child(3){ animation-delay:.3s;  }
+    @keyframes bounce { 0%,80%,100%{ transform:scale(1); opacity:.4; } 40%{ transform:scale(1.5); opacity:1; } }
+
+    /* ─── MISC ─── */
+    .synced-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--lime); margin-left:5px; animation:pop .8s ease forwards; }
+    @keyframes pop { 0%{transform:scale(0);opacity:1} 70%{transform:scale(1.6);opacity:.8} 100%{transform:scale(1);opacity:0} }
+    .empty { text-align:center; color:var(--t300); padding:28px 0; font-size:13px; }
+    .err-box { background:#FEF2F2; color:#7F1D1D; padding:14px; border-radius:12px; margin:14px; font-size:11px; font-family:monospace; white-space:pre-wrap; }
+    @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.9} }
+
+    /* ─── LOGIN SCREEN ─── */
+    .login-screen {
+      position:fixed; inset:0; background:var(--cream); z-index:500;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:24px; transition:opacity .3s ease;
+    }
+    .login-screen.fade { opacity:0; pointer-events:none; }
+    .login-logo { font-size:42px; margin-bottom:10px; }
+    .login-title { font-family:var(--font-d); font-size:32px; color:var(--t900); margin-bottom:4px; }
+    .login-sub { font-size:13px; color:var(--t500); margin-bottom:40px; }
+
+    .user-cards { display:flex; gap:14px; width:100%; max-width:320px; margin-bottom:32px; }
+    .user-card {
+      flex:1; background:var(--white); border-radius:20px; padding:20px 12px;
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+      border:2px solid transparent; cursor:pointer; transition:all .18s;
+      box-shadow:var(--shadow);
+    }
+    .user-card:active { transform:scale(.96); }
+    .user-card.selected { border-color:var(--g600); background:#F0FBF5; }
+    .user-card-avatar {
+      width:56px; height:56px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; font-weight:800; color:white;
+    }
+    .user-card-name { font-size:15px; font-weight:700; }
+
+    .pin-area { width:100%; max-width:280px; }
+    .pin-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t500); text-align:center; margin-bottom:14px; }
+    .pin-dots { display:flex; justify-content:center; gap:12px; margin-bottom:20px; }
+    .pin-dot {
+      width:14px; height:14px; border-radius:50%;
+      border:2px solid var(--cream3); background:transparent; transition:all .15s;
+    }
+    .pin-dot.filled { background:var(--g600); border-color:var(--g600); }
+    .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .pin-key {
+      background:var(--white); border:none; border-radius:14px; padding:16px;
+      font-size:20px; font-weight:600; cursor:pointer; box-shadow:var(--shadow);
+      transition:all .12s; color:var(--t900); font-family:var(--font-b);
+    }
+    .pin-key:active { transform:scale(.92); background:var(--cream2); }
+    .pin-key.del { font-size:16px; color:var(--t500); }
+    .pin-error { color:var(--coral); font-size:13px; text-align:center; margin-top:10px; min-height:18px; }
+    .pin-setup-note { font-size:12px; color:var(--t500); text-align:center; margin-top:8px; line-height:1.5; }
+
+    .login-step { display:none; }
+    .login-step.active { display:block; }
+
+  </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect } = React;
 
-        function App() {
-            const [ingresos, setIngresos] = useState(3350);
-            const [saldoAhorro, setSaldoAhorro] = useState(0);
-            const [gastosFijos, setGastosFijos] = useState([
-                { id: 1, categoria: 'Alquiler', presupuesto: 950, pagado: false },
-                { id: 2, categoria: 'Coche', presupuesto: 400, pagado: false },
-                { id: 3, categoria: 'Guardería', presupuesto: 340, pagado: false },
-                { id: 4, categoria: 'Teléfono', presupuesto: 39.10, pagado: false },
-                { id: 5, categoria: 'Luz', presupuesto: 42, pagado: false },
-                { id: 6, categoria: 'Parking', presupuesto: 121, pagado: false },
-                { id: 7, categoria: 'Gas', presupuesto: 40, pagado: false },
-                { id: 8, categoria: 'Tarjeta cumple Bruno', presupuesto: 50, pagado: false },
-                { id: 9, categoria: 'Agua', presupuesto: 100, pagado: false },
-                { id: 10, categoria: 'Ahorro', presupuesto: 250, pagado: false }
-            ]);
-            const [gastosVariables, setGastosVariables] = useState([]);
-            const [mesActual, setMesActual] = useState(new Date().getMonth());
-            const [añoActual, setAñoActual] = useState(new Date().getFullYear());
-            const [editingFijo, setEditingFijo] = useState(null);
-            const [nuevoGasto, setNuevoGasto] = useState({ fecha: '', monto: '', descripcion: '' });
-            const [mostrarHistorico, setMostrarHistorico] = useState(false);
-            const [historico, setHistorico] = useState({});
 
-            const mesKey = `${añoActual}-${mesActual}`;
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen" style="display:none">
+  <div class="login-logo">🌿</div>
+  <div class="login-title">Hogar</div>
+  <div class="login-sub">¿Quién eres?</div>
 
-            useEffect(() => {
-                const saved = localStorage.getItem('homeExpenses');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    setIngresos(data.ingresos || 3350);
-                    setGastosFijos(data.gastosFijos || gastosFijos);
-                    setHistorico(data.historico || {});
-                    setSaldoAhorro(data.saldoAhorro || 0);
-                    
-                    const mesData = data.historico?.[mesKey];
-                    if (mesData) {
-                        setGastosVariables(mesData.gastosVariables || []);
-                    } else {
-                        setGastosVariables([]);
-                    }
-                }
-            }, [mesKey]);
+  <!-- Step 1: Select user -->
+  <div class="login-step active" id="loginStep1">
+    <div class="user-cards" id="userCards">
+      <!-- rendered by JS -->
+    </div>
+  </div>
 
-            useEffect(() => {
-                const nuevoHistorico = {
-                    ...historico,
-                    [mesKey]: {
-                        gastosVariables,
-                        ingresos,
-                        gastosFijos: gastosFijos.map(g => ({...g})),
-                        totalGastosFijos: gastosFijos.reduce((sum, g) => sum + g.presupuesto, 0),
-                        totalGastosVariables: gastosVariables.reduce((sum, g) => sum + g.monto, 0)
-                    }
-                };
-                
-                localStorage.setItem('homeExpenses', JSON.stringify({
-                    ingresos,
-                    gastosFijos,
-                    historico: nuevoHistorico,
-                    saldoAhorro
-                }));
-                
-                setHistorico(nuevoHistorico);
-            }, [ingresos, gastosFijos, gastosVariables, saldoAhorro, mesKey]);
+  <!-- Step 2: PIN -->
+  <div class="login-step" id="loginStep2">
+    <div class="pin-area">
+      <div class="pin-label" id="pinLabel">Introduce tu PIN</div>
+      <div class="pin-dots">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" data-pin="1">1</button>
+        <button class="pin-key" data-pin="2">2</button>
+        <button class="pin-key" data-pin="3">3</button>
+        <button class="pin-key" data-pin="4">4</button>
+        <button class="pin-key" data-pin="5">5</button>
+        <button class="pin-key" data-pin="6">6</button>
+        <button class="pin-key" data-pin="7">7</button>
+        <button class="pin-key" data-pin="8">8</button>
+        <button class="pin-key" data-pin="9">9</button>
+        <button class="pin-key" data-pin="back" style="grid-column:1">←</button>
+        <button class="pin-key" data-pin="0">0</button>
+        <div></div>
+      </div>
+      <div class="pin-error" id="pinError"></div>
+      <div class="pin-setup-note" id="pinSetupNote" style="display:none">
+        Primera vez: este PIN quedará guardado para futuros accesos.
+      </div>
+    </div>
+  </div>
+</div>
 
-            const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + g.presupuesto, 0);
-            const totalGastosFijosPagados = gastosFijos.filter(g => g.pagado).reduce((sum, g) => sum + g.presupuesto, 0);
-            const totalGastosFijosPendientes = gastosFijos.filter(g => !g.pagado).reduce((sum, g) => sum + g.presupuesto, 0);
-            const resto = ingresos - totalGastosFijos;
-            const diasMes = new Date(añoActual, mesActual + 1, 0).getDate();
-            const presupuestoDiario = resto / diasMes;
-            const totalGastosVariables = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
-            const presupuestoRestante = resto - totalGastosVariables;
-            const ahorroEsperado = gastosFijos.find(g => g.categoria === 'Ahorro')?.presupuesto || 0;
-            
-            const hoy = new Date();
-            const diaActual = hoy.getDate();
-            const diasRestantes = diasMes - diaActual;
-            const gastoPromedioDiario = diaActual > 0 ? totalGastosVariables / diaActual : 0;
-            const proyeccionFinMes = totalGastosVariables + (gastoPromedioDiario * diasRestantes);
-            const diferenciaPrevista = resto - proyeccionFinMes;
-            const estadoProyeccion = diferenciaPrevista >= 0 ? 'bien' : diferenciaPrevista >= -100 ? 'ajustado' : 'peligro';
-            const porcentajeGastado = (totalGastosVariables / resto) * 100;
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div style="font-size:44px">🌿</div>
+  <div class="ld-title">Hogar</div>
+  <div class="ld-sub">Cargando tus datos...</div>
+  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+</div>
 
-            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+<div class="app">
+  <div class="content" id="appContent">
+    <div class="tab-screen active" id="tab-hogar"></div>
+    <div class="tab-screen" id="tab-coach"></div>
+    <div class="tab-screen" id="tab-analisis"></div>
+    <div class="tab-screen" id="tab-metas"></div>
+    <div class="tab-screen" id="tab-familia"></div>
+  </div>
 
-            const cargarMesHistorico = (key) => {
-                const [año, mes] = key.split('-').map(Number);
-                setAñoActual(año);
-                setMesActual(mes);
-                setMostrarHistorico(false);
-            };
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="hogar">
+      <span class="nav-icon">🏠</span><span class="nav-label">Hogar</span>
+    </button>
+    <button class="nav-btn" data-tab="coach">
+      <span class="nav-icon">🌱</span><span class="nav-label">Coach</span>
+    </button>
+    <button class="nav-btn" data-tab="analisis">
+      <span class="nav-icon">📊</span><span class="nav-label">Análisis</span>
+    </button>
+    <button class="nav-btn" data-tab="metas">
+      <span class="nav-icon">✨</span><span class="nav-label">Metas</span>
+    </button>
+    <button class="nav-btn" data-tab="familia">
+      <span class="nav-icon">👨‍👩‍👧‍👦</span><span class="nav-label">Familia</span>
+    </button>
+  </nav>
+</div>
 
-            const historicoOrdenado = Object.keys(historico).sort().reverse();
+<!-- ADD EXPENSE OVERLAY -->
+<div class="overlay" id="addOverlay">
+  <div class="sheet" id="addSheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">Nuevo gasto</span>
+      <button class="btn btn-cream btn-xs" id="closeAdd">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Importe</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inMonto" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Descripción</label>
+      <input class="form-in" type="text" placeholder="ej: Mercadona, Gasolinera…" id="inDesc" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Fecha</label>
+      <input class="form-in" type="date" id="inFecha" />
+    </div>
+    <div class="form-sec"><label class="form-lbl">Categoría</label></div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="form-sec" style="margin-top:4px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveBtn">Guardar gasto →</button>
+    </div>
+  </div>
+</div>
 
-            return (
-                <div className="bg-gradient">
-                    <div className="container">
-                        <div className="card">
-                            <div className="header">
-                                <div className="header-title">
-                                    <div className="icon-box">💰</div>
-                                    <div>
-                                        <div className="title">Gestor de Gastos</div>
-                                        <div className="subtitle">Control mensual</div>
-                                    </div>
-                                </div>
-                                <div className="date-selector">
-                                    <button className="btn btn-small btn-secondary" onClick={() => setMostrarHistorico(true)}>
-                                        📊 Histórico
-                                    </button>
-                                    <select className="select" value={mesActual} onChange={e => setMesActual(parseInt(e.target.value))}>
-                                        {meses.map((mes, i) => <option key={i} value={i}>{mes}</option>)}
-                                    </select>
-                                    <input className="select input-sm" type="number" value={añoActual} onChange={e => setAñoActual(parseInt(e.target.value))} />
-                                </div>
-                            </div>
-                        </div>
+<!-- HISTORICO OVERLAY -->
+<div class="overlay" id="histOverlay">
+  <div class="sheet" id="histSheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">📊 Histórico</span>
+      <button class="btn btn-cream btn-xs" id="closeHist">✕</button>
+    </div>
+    <div id="histContent" style="padding:0 14px 8px"></div>
+  </div>
+</div>
 
-                        <div className="grid">
-                            <div className="card">
-                                <div className="section-title">Estado del Presupuesto</div>
-                                <div className={`alert ${estadoProyeccion === 'bien' ? 'alert-green' : estadoProyeccion === 'ajustado' ? 'alert-orange' : 'alert-red'}`}>
-                                    <div className="alert-content">
-                                        <div className={`alert-icon ${estadoProyeccion === 'bien' ? 'green' : estadoProyeccion === 'ajustado' ? 'orange' : 'red'}`}>
-                                            {estadoProyeccion === 'bien' ? '✓' : '⚠'}
-                                        </div>
-                                        <div style={{flex:1}}>
-                                            <div className="alert-title text-sm">{estadoProyeccion === 'bien' ? '¡Vas genial!' : estadoProyeccion === 'ajustado' ? 'Vas un poco justo' : '¡Cuidado! Te vas a pasar'}</div>
-                                            <div className="text-sm">
-                                                <div><strong>Días restantes:</strong> {diasRestantes} días</div>
-                                                <div><strong>Gasto promedio:</strong> {gastoPromedioDiario.toFixed(2)} €/día</div>
-                                                <div><strong>Proyección:</strong> {proyeccionFinMes.toFixed(2)} €</div>
-                                                <div style={{marginTop:'0.5rem',fontWeight:'bold'}}>
-                                                    {diferenciaPrevista >= 0 ? `Te sobrarán ${diferenciaPrevista.toFixed(2)} €` : `Te faltarán ${Math.abs(diferenciaPrevista).toFixed(2)} €`}
-                                                </div>
-                                                {estadoProyeccion !== 'bien' && <div className="text-sm" style={{marginTop:'0.5rem'}}>💡 Máximo {(presupuestoRestante / diasRestantes).toFixed(2)} €/día</div>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{marginBottom:'1rem'}}>
-                                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'0.5rem'}}>
-                                        <span style={{fontWeight:'600'}}>Gastado</span>
-                                        <span style={{fontWeight:'bold',color:'#4F46E5'}}>{porcentajeGastado.toFixed(1)}%</span>
-                                    </div>
-                                    <div className="progress-bar">
-                                        <div className={`progress-fill ${porcentajeGastado > 90 ? 'bg-red-500' : porcentajeGastado > 70 ? 'bg-orange-500' : 'bg-green-500'}`} style={{width: `${Math.min(porcentajeGastado, 100)}%`}}></div>
-                                    </div>
-                                </div>
-                                <div className="stats">
-                                    <div className="stat-box blue">
-                                        <div className="stat-label">Presupuesto</div>
-                                        <div className="stat-value text-blue">{resto.toFixed(2)} €</div>
-                                    </div>
-                                    <div className="stat-box red">
-                                        <div className="stat-label">Gastado</div>
-                                        <div className="stat-value text-red">{totalGastosVariables.toFixed(2)} €</div>
-                                    </div>
-                                    <div className="stat-box green full">
-                                        <div className="stat-label">Restante</div>
-                                        <div className="stat-value text-green" style={{fontSize:'2rem'}}>{presupuestoRestante.toFixed(2)} €</div>
-                                    </div>
-                                </div>
-                                <div className="form-box">
-                                    <div className="form-title">Añadir Gasto</div>
-                                    <div className="input-group">
-                                        <input className="input-form" type="date" value={nuevoGasto.fecha} onChange={e => setNuevoGasto({...nuevoGasto, fecha: e.target.value})} />
-                                        <input className="input-form" type="number" placeholder="Importe (€)" value={nuevoGasto.monto} onChange={e => setNuevoGasto({...nuevoGasto, monto: e.target.value})} step="0.01" />
-                                        <input className="input-form" type="text" placeholder="Descripción" value={nuevoGasto.descripcion} onChange={e => setNuevoGasto({...nuevoGasto, descripcion: e.target.value})} />
-                                        <button className="btn btn-primary" onClick={() => {
-                                            if (nuevoGasto.fecha && nuevoGasto.monto) {
-                                                setGastosVariables([...gastosVariables, {id: Date.now(), fecha: nuevoGasto.fecha, monto: parseFloat(nuevoGasto.monto), descripcion: nuevoGasto.descripcion || ''}]);
-                                                setNuevoGasto({fecha: '', monto: '', descripcion: ''});
-                                            }
-                                        }}>+ Añadir Gasto</button>
-                                    </div>
-                                </div>
-                            </div>
+<!-- APORTAR META OVERLAY -->
+<div class="overlay" id="metaOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700" id="metaModalTitle">Aportar a meta</span>
+      <button class="btn btn-cream btn-xs" id="closeMeta">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Importe a aportar (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inMetaImporte" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveMetaBtn">Aportar →</button>
+    </div>
+  </div>
+</div>
 
-                            <div className="card">
-                                <div className="section-title">Ingresos y Gastos Fijos</div>
-                                <div className="green-box">
-                                    <label className="label">Ingresos Mensuales</label>
-                                    <input className="input-full" type="number" value={ingresos} onChange={e => setIngresos(parseFloat(e.target.value) || 0)} step="0.01" />
-                                </div>
-                                <div className="purple-box">
-                                    <label className="label">💰 Saldo Total en Cuenta de Ahorro</label>
-                                    <input className="input-purple" type="number" value={saldoAhorro} onChange={e => setSaldoAhorro(parseFloat(e.target.value) || 0)} step="0.01" />
-                                    <div style={{marginTop:'0.5rem',fontSize:'0.75rem',color:'#6B7280'}}>
-                                        Este es tu saldo acumulado total en la cuenta de ahorro
-                                    </div>
-                                </div>
-                                <div className="gasto-list">
-                                    {gastosFijos.map(g => (
-                                        <div key={g.id} className={`gasto-item ${g.pagado ? 'pagado' : ''}`}>
-                                            <input className="checkbox" type="checkbox" checked={g.pagado} onChange={() => {
-                                                setGastosFijos(gastosFijos.map(x => x.id === g.id ? {...x, pagado: !x.pagado} : x));
-                                            }} />
-                                            {editingFijo === g.id ? (
-                                                <>
-                                                    <input className="input" style={{flex:1}} value={g.categoria} onChange={e => {
-                                                        setGastosFijos(gastosFijos.map(x => x.id === g.id ? {...x, categoria: e.target.value} : x));
-                                                    }} />
-                                                    <input className="input" style={{width:'5rem'}} type="number" value={g.presupuesto} onChange={e => {
-                                                        setGastosFijos(gastosFijos.map(x => x.id === g.id ? {...x, presupuesto: parseFloat(e.target.value) || 0} : x));
-                                                    }} step="0.01" />
-                                                    <button className="btn-icon" onClick={() => setEditingFijo(null)}>✓</button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className={`gasto-text ${g.pagado ? 'pagado' : ''}`}>{g.categoria}</span>
-                                                    <span className={`gasto-amount ${g.pagado ? 'pagado' : ''}`}>{g.presupuesto.toFixed(2)} €</span>
-                                                    <button className="btn-icon" onClick={() => setEditingFijo(g.id)}>✎</button>
-                                                    <button className="btn-icon" onClick={() => setGastosFijos(gastosFijos.filter(x => x.id !== g.id))}>🗑</button>
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <button className="btn btn-add" onClick={() => {
-                                    const newId = Math.max(...gastosFijos.map(g => g.id), 0) + 1;
-                                    setGastosFijos([...gastosFijos, {id: newId, categoria: 'Nuevo gasto', presupuesto: 0, pagado: false}]);
-                                    setEditingFijo(newId);
-                                }}>+ Añadir Gasto Fijo</button>
-                                <div className="summary">
-                                    <div className="summary-row">
-                                        <span className="summary-label">Total Gastos Fijos:</span>
-                                        <span className="summary-value text-red">{totalGastosFijos.toFixed(2)} €</span>
-                                    </div>
-                                    <div className="summary-row text-sm">
-                                        <span>Ya pagado:</span>
-                                        <span className="text-green">{totalGastosFijosPagados.toFixed(2)} €</span>
-                                    </div>
-                                    <div className="summary-row text-sm">
-                                        <span>Pendiente:</span>
-                                        <span className="text-orange">{totalGastosFijosPendientes.toFixed(2)} €</span>
-                                    </div>
-                                    <div className="summary-row">
-                                        <span className="summary-label">Resto disponible:</span>
-                                        <span className="summary-value text-green">{resto.toFixed(2)} €</span>
-                                    </div>
-                                    <div className="daily-box">
-                                        <div className="summary-row text-xl">
-                                            <span style={{color:'#4F46E5'}}>Presupuesto diario:</span>
-                                            <span style={{color:'#312E81',fontWeight:'bold'}}>{presupuestoDiario.toFixed(2)} €/día</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+<script>
+// ══════════════════════════════════════════════
+// FIREBASE
+// ══════════════════════════════════════════════
+// Firebase con fallback a localStorage
+const LS_KEY = 'hogar_gastos_data';
+let USE_FIREBASE = false;
+let REF = null;
+let AUTH = null;
+try {
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp({
+      apiKey: "AIzaSyB3kiy6fyLoAgCEH0Kw7K_iQt8YkebY9UY",
+      authDomain: "gastos-familia-marce.firebaseapp.com",
+      projectId: "gastos-familia-marce",
+      storageBucket: "gastos-familia-marce.firebasestorage.app",
+      messagingSenderId: "117082983018",
+      appId: "1:117082983018:web:59a5bfd4a3e015d7251813"
+    });
+    REF = firebase.firestore().collection('gastos').doc('data');
+    AUTH = firebase.auth();
+    USE_FIREBASE = true;
+  }
+} catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
+function lsLoad() { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null; } catch(e){return null;} }
+function lsSave(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e){} }
 
-                            <div className="card">
-                                <div className="section-title">Estado del Presupuesto</div>
+// ══════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════
+const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES_C = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const DIAS_W  = ['L','M','X','J','V','S','D'];
 
-                        <div className="card">
-                            <div className="section-title">Gastos Variables</div>
-                            {gastosVariables.length === 0 ? (
-                                <div className="empty-state">No hay gastos registrados</div>
-                            ) : (
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Fecha</th>
-                                            <th>Descripción</th>
-                                            <th className="text-right">Importe</th>
-                                            <th className="text-center"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {gastosVariables.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
-                                            <tr key={g.id}>
-                                                <td>{new Date(g.fecha).toLocaleDateString('es-ES')}</td>
-                                                <td>{g.descripcion || '-'}</td>
-                                                <td className="text-right" style={{fontWeight:'600'}}>{g.monto.toFixed(2)} €</td>
-                                                <td className="text-center">
-                                                    <button className="btn-icon" onClick={() => setGastosVariables(gastosVariables.filter(x => x.id !== g.id))}>🗑</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+const CATS = [
+  {id:'super', icon:'🛒', label:'Super'},
+  {id:'hogar', icon:'🏠', label:'Hogar'},
+  {id:'coche', icon:'🚗', label:'Coche'},
+  {id:'ocio',  icon:'🎉', label:'Ocio'},
+  {id:'comer', icon:'🍽️', label:'Comer'},
+  {id:'salud', icon:'💊', label:'Salud'},
+  {id:'cole',  icon:'🎒', label:'Cole'},
+  {id:'otros', icon:'✨', label:'Otros'}
+];
 
-                        {mostrarHistorico && (
-                            <div className="modal" onClick={() => setMostrarHistorico(false)}>
-                                <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="modal-title">📊 Histórico de Gastos</div>
-                                        <button className="btn-close" onClick={() => setMostrarHistorico(false)}>×</button>
-                                    </div>
-                                    {historicoOrdenado.length === 0 ? (
-                                        <div className="empty-state">No hay datos históricos</div>
-                                    ) : (
-                                        <div>
-                                            {historicoOrdenado.map(key => {
-                                                const [año, mes] = key.split('-').map(Number);
-                                                const datos = historico[key];
-                                                const mesNombre = meses[mes];
-                                                const totalGastado = datos.totalGastosFijos + datos.totalGastosVariables;
-                                                const sobrante = datos.ingresos - totalGastado;
-                                                
-                                                return (
-                                                    <div key={key} className="historico-item" onClick={() => cargarMesHistorico(key)}>
-                                                        <div className="historico-mes">{mesNombre} {año}</div>
-                                                        <div className="historico-stats">
-                                                            <div><span style={{color:'#6B7280'}}>Ingresos:</span> <strong>{datos.ingresos.toFixed(2)} €</strong></div>
-                                                            <div><span style={{color:'#6B7280'}}>G. Fijos:</span> <strong style={{color:'#DC2626'}}>{datos.totalGastosFijos.toFixed(2)} €</strong></div>
-                                                            <div><span style={{color:'#6B7280'}}>G. Variables:</span> <strong style={{color:'#DC2626'}}>{datos.totalGastosVariables.toFixed(2)} €</strong></div>
-                                                            <div style={{gridColumn:'span 2'}}><span style={{color:'#6B7280'}}>Balance:</span> <strong style={{color: sobrante >= 0 ? '#16A34A' : '#DC2626'}}>{sobrante.toFixed(2)} €</strong></div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+const CAT_COLORS = ['#246B3E','#B8F04A','#E85B4B','#F59E0B','#5B8DD9','#A78BFA','#34D399','#FB923C'];
+
+const MIEMBROS = [
+  {id:'M', nombre:'María',  color:'#2E8B52'},
+  {id:'J', nombre:'Javi',   color:'#E85B4B'},
+  {id:'G', nombre:'Gordo',  color:'#888888'},
+  {id:'B', nombre:'Bruno',  color:'#5B8DD9'}
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+const S = {
+  mesActual: new Date().getMonth(),
+  añoActual: new Date().getFullYear(),
+  ingresos: 3350,
+  saldoAhorro: 0,
+  gastosFijos: [
+    {id:1,  categoria:'Alquiler',  presupuesto:950,   pagado:false},
+    {id:2,  categoria:'Coche',     presupuesto:400,   pagado:false},
+    {id:3,  categoria:'Guardería', presupuesto:340,   pagado:false},
+    {id:4,  categoria:'Teléfono',  presupuesto:39.10, pagado:false},
+    {id:5,  categoria:'Luz',       presupuesto:42,    pagado:false},
+    {id:6,  categoria:'Parking',   presupuesto:121,   pagado:false},
+    {id:7,  categoria:'Gas',       presupuesto:40,    pagado:false},
+    {id:8,  categoria:'Cumple B',  presupuesto:50,    pagado:false},
+    {id:9,  categoria:'Agua',      presupuesto:100,   pagado:false},
+    {id:10, categoria:'Ahorro',    presupuesto:250,   pagado:false}
+  ],
+  gastosVariables: [],
+  metas: [
+    {id:1, nombre:'Vacaciones verano', icono:'✈️', objetivo:2000, aportado:0},
+    {id:2, nombre:'Fondo imprevistos', icono:'🛡️', objetivo:5000, aportado:0},
+    {id:3, nombre:'Cole Bruno',        icono:'🎒', objetivo:800,  aportado:0}
+  ],
+  historico: {},
+  diaInicio:1, diaFin:0, mesFin: new Date().getMonth(),
+  loading: true, synced: false
+};
+
+const UI = {
+  tab: 'hogar',
+  applyingRemote: false,
+  editingField: null,
+  saveTimer: null,
+  syncTimer: null,
+  selCat: 'super',
+  editMetaId: null
+};
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+const fmt   = n => (Number(n)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtI  = n => Math.round(Number(n)||0).toLocaleString('es-ES');
+const escH  = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const pct   = (a,b) => b>0 ? Math.min(100,Math.round((a/b)*100)) : 0;
+const mesKey = () => `${S.añoActual}-${S.mesActual}`;
+const prevKey = () => { let m=S.mesActual-1, a=S.añoActual; if(m<0){m=11;a--;} return `${a}-${m}`; };
+const cat = id => CATS.find(c=>c.id===id) || CATS[7];
+
+function getTotals() {
+  const fijos = S.gastosFijos.reduce((s,g)=>s+(Number(g.presupuesto)||0),0);
+  const vars  = S.gastosVariables.reduce((s,g)=>s+(Number(g.monto)||0),0);
+  const pagados = S.gastosFijos.filter(g=>g.pagado).reduce((s,g)=>s+(Number(g.presupuesto)||0),0);
+  return { fijos, vars, pagados, pendientes: fijos-pagados };
+}
+
+function getBudget() {
+  const {fijos,vars,pagados} = getTotals();
+  const ing  = Number(S.ingresos)||0;
+  const gast = pagados + vars;
+  const saldo = ing - gast;
+  const presVars = ing - fijos;
+
+  const hoy  = new Date();
+  const esHoy = hoy.getMonth()===S.mesActual && hoy.getFullYear()===S.añoActual;
+  const diasMes = new Date(S.añoActual,S.mesActual+1,0).getDate();
+  const diaHoy  = esHoy ? hoy.getDate() : diasMes;
+  const diasR   = Math.max(0, diasMes - diaHoy);
+  const promDia = diaHoy > 0 ? vars/diaHoy : 0;
+  const proy    = vars + promDia*diasR;
+  const dif     = presVars - proy;
+
+  // Semana
+  const dow = hoy.getDay()===0 ? 6 : hoy.getDay()-1;
+  const iniSem = new Date(hoy); iniSem.setDate(hoy.getDate()-dow);
+  const gastSem = S.gastosVariables.filter(g=>{
+    if(!g.fecha) return false;
+    const d=new Date(g.fecha); return d>=iniSem && d<=hoy;
+  }).reduce((s,g)=>s+(Number(g.monto)||0),0);
+  const topeSem = Math.round(presVars / (diasMes/7));
+  const pctSem  = pct(gastSem, topeSem);
+
+  // Por categoría
+  const porCat = {};
+  CATS.forEach(c=>{porCat[c.id]=0;});
+  S.gastosVariables.forEach(g=>{
+    const k=g.categoria||'otros';
+    porCat[k]=(porCat[k]||0)+(Number(g.monto)||0);
+  });
+
+  return {ing,gast,saldo,pagados,fijos,vars,presVars,dif,proy,diasR,promDia,diaHoy,diasMes,
+    gastSem,topeSem,pctSem,porCat,
+    estado: dif>=0?'bien': dif>=-100?'ajustado':'peligro'};
+}
+
+function weekRange() {
+  const now=new Date(), dow=now.getDay()===0?6:now.getDay()-1;
+  const mon=new Date(now); mon.setDate(now.getDate()-dow);
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const f=d=>`${d.getDate()} ${MESES_C[d.getMonth()].toUpperCase()}`;
+  return `${f(mon)}–${f(sun)}`;
+}
+const weekNum = () => Math.ceil(new Date().getDate()/7);
+
+// ══════════════════════════════════════════════
+// RENDER — HOME
+// ══════════════════════════════════════════════
+// Estado del mensaje IA
+const aiMsg = { texto: null, cargando: false, error: false };
+
+const FUNCION_URL = 'https://getmensajecoach-6zh7ykkvea-ew.a.run.app';
+
+async function fetchMensajeIA() {
+  if (aiMsg.cargando) return;
+  aiMsg.cargando = true;
+  aiMsg.error = false;
+  renderTab('hogar');
+
+  const b = getBudget();
+  const catEntries = Object.entries(b.porCat).filter(([,v])=>v>0).sort(([,a],[,b_])=>b_-a);
+  const topCat = catEntries[0];
+
+  try {
+    const res = await fetch(FUNCION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ingresos: b.ing,
+        gastadoMes: b.gast,
+        gastadoSemana: b.gastSem,
+        topeSemana: b.topeSem,
+        diasRestantes: b.diasR,
+        promedioDiario: b.promDia,
+        proyeccion: b.proy,
+        presupuestoVariables: b.presVars,
+        saldoReal: b.saldo,
+        metas: S.metas,
+        topCategoria: topCat ? topCat[0] : 'varios',
+        topCategoriaImporte: topCat ? topCat[1] : 0,
+        usuario: authState.currentUser?.nombre || 'los dos',
+        diaSemana: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+      })
+    });
+    const data = await res.json();
+    aiMsg.texto = data.mensaje || null;
+    aiMsg.error = !data.mensaje;
+  } catch(e) {
+    aiMsg.error = true;
+    console.error('Error IA:', e);
+  }
+  aiMsg.cargando = false;
+  renderTab('hogar');
+}
+
+// Pedir mensaje IA al arrancar (con delay para no bloquear)
+setTimeout(() => { if (!aiMsg.texto && !aiMsg.cargando) fetchMensajeIA(); }, 2000);
+
+function renderHome() {
+  const b = getBudget();
+  const margenMes = b.presVars - b.vars;
+  const pctG = pct(b.gast, b.ing);
+  const recientes = [...S.gastosVariables].sort((a,b_)=>new Date(b_.fecha||0)-new Date(a.fecha||0)).slice(0,5);
+  const pagCount = S.gastosFijos.filter(g=>g.pagado).length;
+
+  // Semáforo visual
+  const semaforo = b.estado === 'bien' ? { emoji:'🟢', color:'var(--lime)', label:'Bien' }
+    : b.estado === 'ajustado' ? { emoji:'🟡', color:'var(--amber)', label:'Atento' }
+    : { emoji:'🔴', color:'var(--coral)', label:'Cuidado' };
+
+  // Impacto de 30€ en metas
+  const meta1 = S.metas[0];
+  const impacto30 = meta1
+    ? `= ${Math.round(30 / ((meta1.objetivo - meta1.aportado) / 100) * 10) / 10}% de ${meta1.nombre}`
+    : null;
+
+  // Días de guardería que cuesta ese gasto
+  const guarderia = S.gastosFijos.find(g => g.categoria.toLowerCase().includes('guard'));
+  const costeDiaGuarderia = guarderia ? (guarderia.presupuesto / 22) : null;
+
+  return `
+    <div class="screen-header">
+      <div class="flex-bc mb-8">
+        <div>
+          <div class="overline">FAMILIA ARCE</div>
+          <div class="d-md" style="margin-top:2px;color:var(--t900)">${MESES[S.mesActual]} ${S.añoActual}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex">${MIEMBROS.slice(0,2).map(m=>`<div class="avatar" style="background:${m.color}">${m.id}</div>`).join('')}</div>
+          ${authState.currentUser ? `<div style="font-size:11px;color:var(--t500);font-weight:600">${authState.currentUser.nombre}</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- HERO: Lo que queda -->
+    <div style="background:var(--g600);border-radius:var(--radius);padding:24px 18px;margin:0 14px 10px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:var(--g700);border-radius:50%;opacity:.4"></div>
+      <div style="position:absolute;bottom:-20px;right:30px;width:90px;height:90px;background:var(--g500);border-radius:50%;opacity:.35"></div>
+      <div style="position:relative;z-index:1">
+        <div class="overline-w mb-4">OS QUEDA ESTE MES</div>
+        <div style="font-family:var(--font-d);font-size:52px;font-weight:normal;line-height:1;letter-spacing:-2px;color:white;margin-bottom:6px">${fmt(Math.max(0, margenMes))} €</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <div class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:11px">${semaforo.emoji} ${semaforo.label}</div>
+          <div style="font-size:12px;opacity:.7">de ${fmt(b.presVars)} € para variables</div>
+        </div>
+        <div style="height:5px;background:rgba(255,255,255,.18);border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:${pct(b.vars, b.presVars)}%;background:${semaforo.color};border-radius:999px;transition:width .6s"></div>
+        </div>
+        <div class="flex-bc" style="margin-top:6px">
+          <div style="font-size:11px;opacity:.65">Gastado: ${fmt(b.gast)} €</div>
+          <div style="font-size:11px;opacity:.65">${b.diasR} días restantes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENSAJE IA -->
+    <div style="margin:0 14px 10px;border-radius:16px;overflow:hidden">
+      ${aiMsg.cargando ? `
+        <div style="background:var(--white);padding:16px;border-radius:16px;display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>
+          <div style="flex:1">
+            <div style="height:10px;background:var(--cream2);border-radius:6px;margin-bottom:6px;animation:shimmer 1.5s ease-in-out infinite"></div>
+            <div style="height:10px;background:var(--cream2);border-radius:6px;width:75%;animation:shimmer 1.5s ease-in-out infinite .3s"></div>
+          </div>
+        </div>`
+      : aiMsg.texto ? `
+        <div style="background:var(--white);padding:16px;border-radius:16px;border-left:3px solid var(--g600)">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px">🌿</div>
+            <div style="flex:1">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t500);margin-bottom:5px">TU COACH HOY</div>
+              <div style="font-size:14px;line-height:1.5;color:var(--t700)">${escH(aiMsg.texto)}</div>
+            </div>
+            <button style="background:transparent;border:none;color:var(--t300);font-size:16px;cursor:pointer;padding:2px" data-action="refresh-ia">↻</button>
+          </div>
+        </div>`
+      : `
+        <div style="background:var(--white);padding:14px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:13px;color:var(--t500)">🌿 Coach no disponible ahora</div>
+          <button class="btn btn-xs btn-cream" data-action="refresh-ia">Reintentar</button>
+        </div>`}
+    </div>
+
+    <!-- SALDO REAL -->
+    <div class="card" style="background:var(--cream)">
+      <div class="flex-bc">
+        <div>
+          <div class="overline mb-4">SALDO EN CUENTA</div>
+          <div style="font-size:28px;font-weight:800;color:${b.saldo>=0?'var(--g600)':'var(--coral)'}">${fmt(b.saldo)} €</div>
+          <div style="font-size:12px;color:var(--t500);margin-top:2px">Después de fijos pagados + variables</div>
+        </div>
+        <div style="text-align:right">
+          <div class="overline mb-4">AHORRO</div>
+          <div style="font-size:22px;font-weight:800;color:var(--g600)">${fmt(S.saldoAhorro)} €</div>
+          <div style="font-size:12px;color:var(--t500)">acumulado</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEMANA -->
+    <div class="card">
+      <div class="flex-bc mb-10">
+        <div>
+          <div class="overline">ESTA SEMANA</div>
+          <div style="font-size:22px;font-weight:800;margin-top:3px">${fmt(b.gastSem)} € <span style="font-size:12px;font-weight:400;color:var(--t500)">de ${fmtI(b.topeSem)} €</span></div>
+        </div>
+        <div class="badge ${b.pctSem>=100?'b-coral':b.pctSem>=80?'b-amber':'b-lime'}">${b.pctSem}%</div>
+      </div>
+      <div class="track-sm mb-6">
+        <div class="fill" style="width:${Math.min(b.pctSem,100)}%;background:${b.pctSem>=100?'var(--coral)':b.pctSem>=80?'var(--amber)':'var(--lime)'}"></div>
+      </div>
+      ${b.diasR>0 ? `
+        <div style="font-size:12px;color:var(--t500);display:flex;align-items:center;gap:6px">
+          ${b.pctSem>=100?'⚠️':'💡'}
+          <span>Máximo <strong>${fmt(Math.max(0,(b.presVars-b.vars)/b.diasR))} €/día</strong> los próximos ${b.diasR} días</span>
+        </div>
+        ${b.pctSem < 80 && costeDiaGuarderia ? `
+          <div style="margin-top:8px;padding:10px 12px;background:var(--cream);border-radius:10px;font-size:12px;color:var(--t700)">
+            💚 Vas bien. Cada ${fmt(costeDiaGuarderia.toFixed(0))} € que ahorráis = 1 día de guardería de Bruno
+          </div>` : ''}
+        ${b.pctSem >= 80 && impacto30 ? `
+          <div style="margin-top:8px;padding:10px 12px;background:#FFF8E8;border-radius:10px;font-size:12px;color:var(--t700);border-left:3px solid var(--amber)">
+            💡 Esa pizza del finde (30 €) ${impacto30}
+          </div>` : ''}` 
+      : `<div style="font-size:12px;color:var(--t500)">Semana completada</div>`}
+    </div>
+
+    <!-- METAS -->
+    ${S.metas.length>0 ? `
+      <div class="sec-divider"><div class="sec-title">Metas de ahorro</div><div class="sec-action" data-go="metas">Ver todas →</div></div>
+      <div class="p14">
+        ${S.metas.slice(0,2).map(m => {
+          const p = pct(m.aportado, m.objetivo);
+          const faltan = m.objetivo - m.aportado;
+          const mesesParaLlegar = b.promDia > 0 ? Math.ceil(faltan / (b.promDia * 30 * 0.1)) : null;
+          return `<div class="goal-item" style="margin-bottom:8px">
+            <div class="flex-bc mb-10">
+              <div class="flex-c gap-10">
+                <div style="font-size:24px;width:40px;height:40px;background:var(--cream);border-radius:10px;display:flex;align-items:center;justify-content:center">${m.icono}</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700">${escH(m.nombre)}</div>
+                  <div style="font-size:11px;color:var(--t500)">${fmt(m.aportado)} € de ${fmt(m.objetivo)} €</div>
                 </div>
-            );
-        }
+              </div>
+              <div class="goal-pct ${p>=40?'on':'off'}">${p}%</div>
+            </div>
+            <div class="track"><div class="fill ${p>=40?'fill-lime':'fill-coral'}" style="width:${p}%"></div></div>
+            <div style="font-size:11px;color:var(--t300);margin-top:5px;display:flex;justify-content:space-between">
+              <span>Faltan ${fmt(faltan)} €</span>
+              ${mesesParaLlegar ? `<span>~${mesesParaLlegar} meses a este ritmo</span>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
 
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
+    <!-- ACCIONES -->
+    <div class="flex-c gap-10 p14 mb-12">
+      <button class="btn btn-lime" style="border-radius:16px" data-action="open-add"><span style="font-size:17px">+</span> Añadir gasto</button>
+      <button class="btn btn-cream" style="border-radius:16px" data-go="analisis">📊 Ver análisis</button>
+    </div>
+
+    <!-- FIJOS -->
+    <div class="sec-divider">
+      <div class="sec-title">Gastos fijos</div>
+      <div style="font-size:12px;color:var(--t500)">${pagCount}/${S.gastosFijos.length} pagados</div>
+    </div>
+    <div class="p14">
+      ${S.gastosFijos.map(g=>`
+        <div class="fijo-item ${g.pagado?'paid':''}">
+          <div class="check-ring ${g.pagado?'on':''}" data-action="toggle-pagado" data-id="${g.id}">${g.pagado?'✓':''}</div>
+          <span style="flex:1;font-size:14px;font-weight:600;${g.pagado?'text-decoration:line-through;color:var(--t300)':''}">${escH(g.categoria)}</span>
+          <span style="font-size:13px;font-weight:700;${g.pagado?'color:var(--g600)':''}">${fmt(g.presupuesto)} €</span>
+          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-fijo" data-id="${g.id}">🗑</button>
+        </div>`).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:14px;margin-top:4px;margin-bottom:8px" data-action="add-fijo">+ Añadir fijo</button>
+    </div>
+
+    <!-- ÚLTIMOS GASTOS -->
+    ${recientes.length>0 ? `
+      <div class="sec-divider"><div class="sec-title">Últimos gastos</div></div>
+      <div class="p14 mb-8">
+        ${recientes.map(g=>`<div class="tx-item">
+          <div class="tx-ico">${cat(g.categoria).icon}</div>
+          <div style="flex:1">
+            <div class="tx-name">${escH(g.descripcion||cat(g.categoria).label)}</div>
+            <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha||'')}</div>
+          </div>
+          <div class="tx-amt">${fmt(g.monto)} €</div>
+          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-variable" data-id="${g.id}">🗑</button>
+        </div>`).join('')}
+      </div>` : `<div class="empty">Sin gastos variables este mes</div>`}
+    <div style="height:8px"></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// RENDER — COACH
+// ══════════════════════════════════════════════
+function renderCoach() {
+  const b = getBudget();
+  let msg, sub;
+  if(b.estado==='bien')     { msg=`¡Vais muy bien! Lleváis <em>${fmt(b.vars)} €</em> en variables y el mes os sonríe.`; sub='A este ritmo os sobrará margen al final. ¡Seguid así!'; }
+  else if(b.estado==='ajustado') { msg=`Ojo familia, vais un poco <em>justos de margen</em> esta semana.`; sub=`Intentad no pasar de ${fmt(b.promDia*0.8)} €/día y llegáis bien.`; }
+  else { msg=`¡Cuidado! A este ritmo os <em>pasaréis ${fmt(Math.abs(b.dif))} €</em> del presupuesto.`; sub=`Máximo ${fmt(Math.max(0,(b.presVars-b.vars)/Math.max(b.diasR,1)))} €/día para salvar el mes.`; }
+
+  const topCatE = Object.entries(b.porCat).filter(([,v])=>v>0).sort(([,a],[,b_])=>b_-a)[0];
+  const topCatInfo = topCatE ? cat(topCatE[0]) : null;
+
+  return `
+    <div class="screen-header">
+      <div class="overline" style="margin-bottom:3px">SEMANA ${weekNum()} · ${weekRange()}</div>
+      <div class="d-md" style="color:var(--t900)">Tu coach</div>
+    </div>
+
+    <div class="card">
+      <div class="flex-bc mb-12">
+        <div>
+          <div class="overline">PRESUPUESTO ESTA SEMANA</div>
+          <div style="font-size:28px;font-weight:800;margin-top:3px">${fmt(b.gastSem)} <span style="font-size:14px;font-weight:400;color:var(--t500)">/ ${fmtI(b.topeSem)} €</span></div>
+        </div>
+        <div class="badge ${b.pctSem>=100?'b-coral':b.pctSem>=80?'b-amber':'b-lime'}">${b.pctSem>=80?'⚠ Atento':'✓ Bien'}</div>
+      </div>
+      <div class="track-sm mb-8">
+        <div class="fill" style="width:${Math.min(b.pctSem,100)}%;background:${b.pctSem>=100?'var(--coral)':b.pctSem>=80?'var(--amber)':'var(--lime)'}"></div>
+      </div>
+      <div class="flex-bc" style="padding:2px 0">
+        ${DIAS_W.map((d,i)=>{const t=new Date().getDay()===0?6:new Date().getDay()-1; return `<span style="font-size:11px;${i===t?'color:var(--g600);font-weight:700':'color:var(--t300)'}">${d}</span>`}).join('')}
+      </div>
+      ${b.diasR>0?`<div class="alert-row warn" style="margin-top:12px;margin-bottom:0">
+        <div class="alert-em">⚡</div>
+        <div><div class="alert-title">Quedan ${fmt(b.presVars-b.vars)} € para variables</div>
+        <div class="alert-body">Son <strong>${fmt(Math.max(0,(b.presVars-b.vars)/b.diasR))} €/día</strong> hasta fin de mes.</div></div>
+      </div>`:''}
+    </div>
+
+    <div class="coach-card">
+      <div class="coach-label">TU COACH DICE</div>
+      <div class="coach-text">"${msg}"</div>
+      <div class="coach-sub">${sub}</div>
+    </div>
+
+    ${topCatInfo?`
+      <div class="card">
+        <div class="overline mb-8">MAYOR GASTO ESTE MES</div>
+        <div class="flex-c gap-12">
+          <div style="font-size:34px">${topCatInfo.icon}</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700">${topCatInfo.label}</div>
+            <div style="font-size:12px;color:var(--t500);margin-bottom:6px">${fmt(topCatE[1])} € · ${pct(topCatE[1],b.vars)}% del gasto variable</div>
+            <div class="track-sm"><div class="fill fill-lime" style="width:${pct(topCatE[1],b.vars)}%"></div></div>
+          </div>
+        </div>
+      </div>`:''}
+
+    <div class="card">
+      <div class="overline mb-8">PROGRESO DEL MES</div>
+      <div class="flex-bc mb-6">
+        <span style="font-size:12px;color:var(--t500)">Día ${b.diaHoy} de ${b.diasMes}</span>
+        <span style="font-size:12px;font-weight:700">${pct(b.diaHoy,b.diasMes)}% completado</span>
+      </div>
+      <div class="track"><div class="fill fill-green" style="width:${pct(b.diaHoy,b.diasMes)}%"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div style="background:var(--cream);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--t500);margin-bottom:3px;text-transform:uppercase;font-weight:700">Promedio</div>
+          <div style="font-size:19px;font-weight:800">${fmt(b.promDia)} €</div>
+          <div style="font-size:10px;color:var(--t500)">por día</div>
+        </div>
+        <div style="background:var(--cream);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--t500);margin-bottom:3px;text-transform:uppercase;font-weight:700">Proyección</div>
+          <div style="font-size:19px;font-weight:800;color:${b.proy>b.presVars?'var(--coral)':'var(--g600)'}">${fmt(b.proy)} €</div>
+          <div style="font-size:10px;color:var(--t500)">fin de mes</div>
+        </div>
+      </div>
+    </div>
+
+    ${S.gastosFijos.filter(g=>!g.pagado).length>0?`
+      <div class="card">
+        <div class="overline mb-8">FIJOS PENDIENTES</div>
+        ${S.gastosFijos.filter(g=>!g.pagado).map(g=>`
+          <div class="flex-bc" style="padding:8px 0;border-bottom:1px solid var(--cream2)">
+            <span style="font-size:13px">${escH(g.categoria)}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--coral)">${fmt(g.presupuesto)} €</span>
+          </div>`).join('')}
+      </div>`:''}
+    <div style="height:8px"></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// RENDER — ANÁLISIS
+// ══════════════════════════════════════════════
+function renderAnalisis() {
+  const b = getBudget();
+
+  const last6 = [];
+  for(let i=5;i>=0;i--) {
+    let m=S.mesActual-i, a=S.añoActual;
+    while(m<0){m+=12;a--;}
+    const k=`${a}-${m}`;
+    const d=S.historico?.[k];
+    let tot=d?(Number(d.totalGastosFijos||0)+Number(d.totalGastosVariables||0)):0;
+    if(k===mesKey()) tot=b.gast;
+    last6.push({label:MESES_C[m], tot, isNow:k===mesKey()});
+  }
+  const maxTot = Math.max(...last6.map(x=>x.tot),1);
+  const mediaM = last6.filter(x=>x.tot>0).reduce((s,x)=>s+x.tot,0) / Math.max(last6.filter(x=>x.tot>0).length,1);
+
+  const catBk = CATS.map((c,i)=>({...c,tot:b.porCat[c.id]||0,color:CAT_COLORS[i]}))
+    .filter(c=>c.tot>0).sort((a,b_)=>b_.tot-a.tot);
+  const totVars = catBk.reduce((s,c)=>s+c.tot,0)||1;
+
+  // Donut SVG
+  function donutSVG(cats, total) {
+    const s=110, r=36, cx=s/2, cy=s/2;
+    const c2=2*Math.PI*r;
+    let off=0;
+    const segs = cats.slice(0,5).map((c,i)=>{
+      const p=c.tot/total, d=p*c2, g=c2-d;
+      const svg=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c.color}" stroke-width="20" stroke-dasharray="${d} ${g}" stroke-dashoffset="${-off*c2}" transform="rotate(-90 ${cx} ${cy})"/>`;
+      off+=p; return svg;
+    }).join('');
+    return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" style="flex-shrink:0">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--cream2)" stroke-width="20"/>
+      ${segs}
+      <text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="8" fill="var(--t500)">TOTAL</text>
+      <text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="11" font-weight="bold" fill="var(--t900)">${fmtI(b.vars)} €</text>
+    </svg>`;
+  }
+
+  return `
+    <div class="screen-header">
+      <div class="overline mb-4">ÚLTIMOS 6 MESES</div>
+      <div class="d-md" style="color:var(--t900)">Análisis</div>
+    </div>
+
+    <div class="card">
+      <div style="margin-bottom:4px">
+        <div style="font-size:11px;color:var(--t500);margin-bottom:2px">Media mensual</div>
+        <div style="font-size:28px;font-weight:800">${fmt(mediaM)} €</div>
+      </div>
+      <div class="bar-chart" style="margin-top:12px">
+        ${last6.map(m=>{
+          const h=Math.max(6,Math.round((m.tot/maxTot)*100));
+          return `<div class="bar-col">
+            <div class="bar-val">${m.tot>0?fmtI(m.tot):''}</div>
+            <div class="bar-fill" style="height:${h}px;background:${m.isNow?'var(--g600)':'var(--cream2)'}"></div>
+            <div class="bar-lbl ${m.isNow?'now':''}">${m.label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">Dónde se va el dinero</div>
+      ${b.vars===0?`<div class="empty">Sin gastos variables este mes</div>`:`
+        <div class="donut-wrap">
+          ${donutSVG(catBk, totVars)}
+          <div class="legend">
+            ${catBk.slice(0,5).map((c,i)=>`
+              <div class="legend-row">
+                <div style="display:flex;align-items:center"><div class="legend-dot" style="background:${c.color}"></div>${c.label}</div>
+                <span style="font-weight:700">${pct(c.tot,totVars)}%</span>
+              </div>`).join('')}
+          </div>
+        </div>`}
+    </div>
+
+    ${catBk.length>0?`
+      <div class="card">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Por categoría</div>
+        ${catBk.map((c,i)=>`
+          <div class="bk-item">
+            <div class="bk-ico">${c.icon}</div>
+            <div class="bk-info">
+              <div class="flex-bc mb-4">
+                <span class="bk-name">${c.label}</span>
+                <span style="font-size:13px;font-weight:700">${fmt(c.tot)} €</span>
+              </div>
+              <div style="height:4px;background:var(--cream2);border-radius:999px;overflow:hidden">
+                <div style="height:100%;width:${pct(c.tot,totVars)}%;background:${c.color};border-radius:999px"></div>
+              </div>
+            </div>
+            <div class="bk-pct">${pct(c.tot,totVars)}%</div>
+          </div>`).join('')}
+      </div>`:''}
+
+    <div class="card-dark" style="margin-bottom:16px">
+      <div class="card-content">
+        <div class="overline-w mb-4">AHORRO DISPONIBLE</div>
+        <div class="d-lg" style="color:white">${fmt(Math.max(0,b.ing-b.fijos-b.vars))} €</div>
+        <div style="font-size:12px;opacity:.7;margin-top:4px">estimado para ahorrar este mes</div>
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// RENDER — METAS
+// ══════════════════════════════════════════════
+function renderMetas() {
+  const totAp = S.metas.reduce((s,m)=>s+(Number(m.aportado)||0),0);
+
+  return `
+    <div class="screen-header">
+      <div class="overline mb-4">AHORRANDO EN FAMILIA</div>
+      <div class="d-md" style="color:var(--t900)">Vuestras metas</div>
+    </div>
+
+    <div class="card-lime">
+      <div class="flex-c gap-12">
+        <div style="font-size:32px">🌱</div>
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g800)">TOTAL AHORRADO</div>
+          <div style="font-size:28px;font-weight:800;color:var(--g800)">${fmt(S.saldoAhorro||totAp)} €</div>
+          <div style="font-size:12px;color:var(--g700)">${S.metas.length} metas activas</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p14">
+      ${S.metas.map(m=>{
+        const p=pct(m.aportado,m.objetivo);
+        const on=p>=40;
+        return `<div class="goal-item">
+          <div class="flex-bc mb-12">
+            <div class="flex-c gap-10">
+              <div style="font-size:28px;width:44px;height:44px;background:var(--cream);border-radius:12px;display:flex;align-items:center;justify-content:center">${m.icono}</div>
+              <div>
+                <div style="font-size:15px;font-weight:700">${escH(m.nombre)}</div>
+                <div style="font-size:12px;color:var(--t500)">${fmt(m.aportado)} € de ${fmt(m.objetivo)} €</div>
+              </div>
+            </div>
+            <div class="goal-pct ${on?'on':'off'}">${p}%</div>
+          </div>
+          <div class="track"><div class="fill ${on?'fill-lime':'fill-coral'}" style="width:${p}%"></div></div>
+          <div class="flex-bc" style="margin-top:8px">
+            <span style="font-size:12px;color:var(--t300)">Faltan ${fmt(m.objetivo-m.aportado)} €</span>
+            <button class="btn-ghost btn-xs" data-action="aportar-meta" data-id="${m.id}">+ aportar →</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:16px" data-action="add-meta">
+        + Nueva meta
+      </button>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// RENDER — FAMILIA
+// ══════════════════════════════════════════════
+function renderFamilia() {
+  const b = getBudget();
+  const porM = {};
+  MIEMBROS.forEach(m=>{ porM[m.id]=0; });
+  S.gastosVariables.forEach(g=>{
+    if(g.pagadoPor) porM[g.pagadoPor]=(porM[g.pagadoPor]||0)+(Number(g.monto)||0);
+  });
+
+  return `
+    <div class="screen-header">
+      <div class="overline mb-4">LOS ARCE · ${MIEMBROS.length} MIEMBROS</div>
+      <div class="d-md" style="color:var(--t900)">Familia</div>
+    </div>
+
+    <div class="card-dark">
+      <div class="card-content">
+        <div class="overline-w mb-12">RESUMEN DEL MES</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:10px;opacity:.65;margin-bottom:3px">Ingresos</div>
+            <div style="font-size:16px;font-weight:800">${fmtI(b.ing)} €</div>
+          </div>
+          <div>
+            <div style="font-size:10px;opacity:.65;margin-bottom:3px">Gastado</div>
+            <div style="font-size:16px;font-weight:800;color:var(--lime)">${fmt(b.gast)} €</div>
+          </div>
+          <div>
+            <div style="font-size:10px;opacity:.65;margin-bottom:3px">Disponible</div>
+            <div style="font-size:16px;font-weight:800;color:${b.saldo>=0?'white':'var(--coral)'}">${fmt(b.saldo)} €</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-divider">
+      <div class="sec-title">Miembros</div>
+    </div>
+    <div class="p14">
+      ${MIEMBROS.map(m=>`
+        <div class="tx-item" style="margin-bottom:8px">
+          <div class="avatar-lg" style="background:${m.color}">${m.id}</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700">${m.nombre}</div>
+            <div style="font-size:12px;color:var(--t500)">Gastos registrados: <strong>${fmt(porM[m.id]||0)} €</strong></div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <div class="sec-divider"><div class="sec-title">Configuración</div></div>
+    <div class="p14">
+      <div class="card" style="margin:0 0 10px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Ingresos mensuales</div>
+        <input type="number" step="0.01" value="${S.ingresos}" data-field="ingresos"
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:18px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
+        <div style="font-size:12px;color:var(--t500);margin-top:10px;margin-bottom:6px">💰 Saldo cuenta de ahorro</div>
+        <input type="number" step="0.01" value="${S.saldoAhorro}" data-field="saldoAhorro"
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:18px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
+      </div>
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;margin-bottom:8px" data-action="open-historico">
+        📊 Ver histórico de meses
+      </button>
+      ${S.synced?`<div style="text-align:center;font-size:12px;color:var(--g600);font-weight:600;padding:8px">✓ Datos sincronizados<span class="synced-dot"></span></div>`:''}
+      ${authState.currentUser?`
+        <div style="background:var(--cream);border-radius:16px;padding:14px 16px;margin-top:6px;display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:${authState.currentUser.color};display:flex;align-items:center;justify-content:center;color:white;font-weight:700">${authState.currentUser.id}</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700">${authState.currentUser.nombre}</div>
+            <div style="font-size:11px;color:var(--t500)">Sesión activa</div>
+          </div>
+          <button class="btn btn-cream btn-xs" data-action="logout" style="color:var(--coral)">Salir</button>
+        </div>`:''}
+    </div>
+    <div style="height:8px"></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// MAIN RENDER
+// ══════════════════════════════════════════════
+function renderTab(id) {
+  const map = {hogar:renderHome, coach:renderCoach, analisis:renderAnalisis, metas:renderMetas, familia:renderFamilia};
+  const el = document.getElementById(`tab-${id}`);
+  if (el && map[id]) el.innerHTML = map[id]();
+  ['hogar','coach','analisis','metas','familia'].forEach(t=>{
+    const te = document.getElementById(`tab-${t}`);
+    if(te) te.classList.toggle('active', t===id);
+  });
+}
+
+function render() {
+  if (UI.editingField) return;
+  renderTab(UI.tab);
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function goTab(t) {
+  UI.tab = t;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  render();
+  document.getElementById('appContent').scrollTop = 0;
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>goTab(btn.dataset.tab));
+});
+
+// ══════════════════════════════════════════════
+// ADD EXPENSE MODAL
+// ══════════════════════════════════════════════
+function renderCatGrid() {
+  const g = document.getElementById('catGrid');
+  if(!g) return;
+  g.innerHTML = CATS.map(c=>`
+    <button class="cat-btn ${UI.selCat===c.id?'sel':''}" data-cat="${c.id}">
+      <span class="cat-ico">${c.icon}</span>
+      <span class="cat-lbl">${c.label}</span>
+    </button>`).join('');
+}
+
+function openAdd() {
+  const o = document.getElementById('addOverlay');
+  o.classList.add('open');
+  document.body.style.overflow='hidden';
+  const f = document.getElementById('inFecha');
+  if(f && !f.value) f.value = new Date().toISOString().split('T')[0];
+  renderCatGrid();
+}
+function closeAdd() {
+  document.getElementById('addOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('closeAdd').addEventListener('click', closeAdd);
+document.getElementById('addOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('addOverlay')) closeAdd();
+});
+document.getElementById('addOverlay').addEventListener('click', e=>{
+  const cb = e.target.closest('[data-cat]');
+  if(cb){ UI.selCat=cb.dataset.cat; renderCatGrid(); }
+});
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const monto = document.getElementById('inMonto').value;
+  const fecha = document.getElementById('inFecha').value;
+  const desc  = document.getElementById('inDesc').value;
+  if(!monto||!fecha){ document.getElementById('inMonto').style.borderColor='var(--coral)'; return; }
+  S.gastosVariables.push({
+    id: Date.now(),
+    fecha, monto:Number(monto),
+    descripcion: desc||'',
+    categoria: UI.selCat,
+    pagadoPor: authState.currentUser?.id || 'M'
+  });
+  document.getElementById('inMonto').value='';
+  document.getElementById('inDesc').value='';
+  document.getElementById('inFecha').value='';
+  closeAdd();
+  render();
+  scheduleSave();
+});
+
+// ══════════════════════════════════════════════
+// HISTORICO MODAL
+// ══════════════════════════════════════════════
+function openHistorico() {
+  const keys = Object.keys(S.historico||{}).sort().reverse();
+  const cont = document.getElementById('histContent');
+  cont.innerHTML = keys.length===0
+    ? `<div class="empty">Sin datos históricos</div>`
+    : keys.map(k=>{
+        const [a,m]=k.split('-').map(Number);
+        const d=S.historico[k]||{};
+        const tot=(Number(d.totalGastosFijos||0)+Number(d.totalGastosVariables||0));
+        const bal=(Number(d.ingresos||0))-tot;
+        return `<div class="flex-bc" style="padding:13px 0;border-bottom:1px solid var(--cream2);cursor:pointer" data-action="load-mes" data-key="${escH(k)}">
+          <div>
+            <div style="font-size:15px;font-weight:700">${MESES[m]} ${a}</div>
+            <div style="font-size:12px;color:var(--t500);margin-top:2px">Gastado: ${fmt(tot)} €</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:${bal>=0?'var(--g600)':'var(--coral)'}">${fmt(bal)} €</div>
+        </div>`;
+      }).join('');
+  document.getElementById('histOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeHistorico() {
+  document.getElementById('histOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('closeHist').addEventListener('click', closeHistorico);
+document.getElementById('histOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('histOverlay')) closeHistorico();
+});
+
+// ══════════════════════════════════════════════
+// APORTAR META
+// ══════════════════════════════════════════════
+function openMetaModal(id) {
+  UI.editMetaId = id;
+  const m = S.metas.find(x=>x.id===Number(id));
+  if(m) document.getElementById('metaModalTitle').textContent = `Aportar a: ${m.nombre}`;
+  document.getElementById('inMetaImporte').value='';
+  document.getElementById('metaOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeMeta() {
+  document.getElementById('metaOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('closeMeta').addEventListener('click', closeMeta);
+document.getElementById('metaOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('metaOverlay')) closeMeta();
+});
+document.getElementById('saveMetaBtn').addEventListener('click', ()=>{
+  const val = Number(document.getElementById('inMetaImporte').value||0);
+  if(!val||val<=0) return;
+  S.metas = S.metas.map(m=>m.id===Number(UI.editMetaId)?{...m,aportado:m.aportado+val}:m);
+  closeMeta();
+  render();
+  scheduleSave();
+});
+
+// ══════════════════════════════════════════════
+// EVENT DELEGATION
+// ══════════════════════════════════════════════
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('[data-action]');
+  const go  = e.target.closest('[data-go]');
+
+  if(go) { goTab(go.dataset.go); return; }
+  if(!btn) return;
+  const act = btn.dataset.action;
+
+  if(act==='open-add')      { openAdd(); return; }
+  if(act==='open-historico'){ openHistorico(); return; }
+  if(act==='logout')         { logout(); return; }
+  if(act==='refresh-ia')    { aiMsg.texto=null; fetchMensajeIA(); return; }
+  if(act==='close-historico'){ closeHistorico(); return; }
+  if(act==='aportar-meta')  { openMetaModal(btn.dataset.id); return; }
+
+  if(act==='load-mes') {
+    const k=btn.dataset.key;
+    const [a,m]=k.split('-').map(Number);
+    S.añoActual=a; S.mesActual=m;
+    const md=S.historico?.[k];
+    S.gastosVariables=Array.isArray(md?.gastosVariables)?md.gastosVariables:[];
+    closeHistorico();
+    render(); scheduleSave(); return;
+  }
+  if(act==='toggle-pagado') {
+    const id=Number(btn.dataset.id);
+    S.gastosFijos=S.gastosFijos.map(x=>x.id===id?{...x,pagado:!x.pagado}:x);
+    render(); scheduleSave(); return;
+  }
+  if(act==='del-variable') {
+    const id=Number(btn.dataset.id);
+    S.gastosVariables=S.gastosVariables.filter(x=>x.id!==id);
+    render(); scheduleSave(); return;
+  }
+  if(act==='del-fijo') {
+    const id=Number(btn.dataset.id);
+    S.gastosFijos=S.gastosFijos.filter(x=>x.id!==id);
+    render(); scheduleSave(); return;
+  }
+  if(act==='add-fijo') {
+    const newId=Math.max(0,...S.gastosFijos.map(g=>g.id))+1;
+    S.gastosFijos.push({id:newId,categoria:'Nuevo gasto',presupuesto:0,pagado:false});
+    render(); scheduleSave(); return;
+  }
+  if(act==='add-meta') {
+    const name=prompt('Nombre de la meta:');
+    if(!name) return;
+    const obj=Number(prompt('Objetivo en €:')||0);
+    const ico=prompt('Emoji icono (ej: 🏖️):')||'💰';
+    S.metas.push({id:Date.now(),nombre:name,icono:ico,objetivo:obj,aportado:0});
+    render(); scheduleSave(); return;
+  }
+},{passive:true});
+
+// ══════════════════════════════════════════════
+// FIELD PROTECTION (ingresos/saldoAhorro)
+// ══════════════════════════════════════════════
+const protectedFields=['ingresos','saldoAhorro'];
+document.addEventListener('focusin', e=>{
+  const f=e.target.dataset.field;
+  if(protectedFields.includes(f)){
+    UI.editingField=f;
+    if(UI.saveTimer){clearTimeout(UI.saveTimer);UI.saveTimer=null;}
+  }
+},true);
+document.addEventListener('focusout', e=>{
+  const f=e.target.dataset.field;
+  if(protectedFields.includes(f)){
+    if(f==='ingresos')    S.ingresos=Number(e.target.value||0);
+    if(f==='saldoAhorro') S.saldoAhorro=Number(e.target.value||0);
+    UI.editingField=null;
+    saveNow(); render();
+  }
+},true);
+
+// ══════════════════════════════════════════════
+// FIREBASE SAVE
+// ══════════════════════════════════════════════
+function scheduleSave() {
+  if(S.loading||UI.applyingRemote) return;
+  if(UI.saveTimer) clearTimeout(UI.saveTimer);
+  UI.saveTimer = setTimeout(saveNow, 800);
+}
+
+async function saveNow() {
+  const k=mesKey(), t=getTotals();
+  const hist={...(S.historico||{}),[k]:{
+    gastosVariables:S.gastosVariables,
+    ingresos:Number(S.ingresos)||0,
+    gastosFijos:S.gastosFijos.map(g=>({...g})),
+    totalGastosFijos:t.fijos,
+    totalGastosVariables:t.vars
+  }};
+  S.historico=hist;
+  const payload={
+    ingresos:Number(S.ingresos)||0,
+    gastosFijos:S.gastosFijos,
+    saldoAhorro:Number(S.saldoAhorro)||0,
+    diaInicio:Number(S.diaInicio)||1,
+    diaFin:Number(S.diaFin)||0,
+    mesActual:S.mesActual,
+    mesFin:Number(S.mesFin)||0,
+    metas:S.metas,
+    historico:hist
+  };
+  if (USE_FIREBASE && REF) {
+    try {
+      await REF.set({...payload, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    } catch(e){ console.error(e); }
+  } else {
+    lsSave(payload);
+  }
+  S.synced=true;
+  if(UI.syncTimer) clearTimeout(UI.syncTimer);
+  UI.syncTimer=setTimeout(()=>{S.synced=false;},2500);
+}
+
+
+// ══════════════════════════════════════════════
+// AUTH — LOGIN CON PIN
+// ══════════════════════════════════════════════
+// Los usuarios de la pareja se configuran aquí.
+// Email ficticio: {id}@hogar.app  — el PIN es su contraseña de 4 dígitos.
+const FAMILY_USERS = [
+  { id:'M', nombre:'María', color:'#2E8B52', email:'maria@hogar.app' },
+  { id:'G', nombre:'Gordo', color:'#E85B4B', email:'gordo@hogar.app' }
+];
+
+const authState = {
+  currentUser: null,   // { id, nombre, color, email }
+  selectedUser: null,  // usuario seleccionado en pantalla de login
+  pin: '',             // PIN que se está escribiendo
+  isSetup: false       // true = primera vez, registrar; false = login
+};
+
+function renderUserCards() {
+  const c = document.getElementById('userCards');
+  if (!c) return;
+  c.innerHTML = FAMILY_USERS.map(u => `
+    <div class="user-card ${authState.selectedUser?.id === u.id ? 'selected' : ''}"
+         data-auth-user="${u.id}">
+      <div class="user-card-avatar" style="background:${u.color}">${u.id}</div>
+      <div class="user-card-name">${u.nombre}</div>
+    </div>
+  `).join('');
+}
+
+function showLoginStep(n) {
+  document.getElementById('loginStep1').classList.toggle('active', n === 1);
+  document.getElementById('loginStep2').classList.toggle('active', n === 2);
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('pd' + i)?.classList.toggle('filled', i < authState.pin.length);
+  }
+}
+
+function clearPinError() {
+  const e = document.getElementById('pinError');
+  if (e) e.textContent = '';
+}
+
+function setPinError(msg) {
+  const e = document.getElementById('pinError');
+  if (e) e.textContent = msg;
+  // Shake animation
+  const dots = document.querySelector('.pin-dots');
+  if (dots) { dots.style.animation='shake .4s ease'; setTimeout(()=>{ dots.style.animation=''; },400); }
+}
+
+// Seleccionar usuario en paso 1
+document.addEventListener('click', e => {
+  const card = e.target.closest('[data-auth-user]');
+  if (!card) return;
+  const uid = card.getAttribute('data-auth-user');
+  authState.selectedUser = FAMILY_USERS.find(u => u.id === uid);
+  authState.pin = '';
+  renderUserCards();
+  // Check if user exists (detect setup mode)
+  checkUserExists(authState.selectedUser);
+}, { passive: true });
+
+async function checkUserExists(user) {
+  if (USE_FIREBASE && AUTH) {
+    // Intentamos hacer signIn con un PIN dummy para ver si el usuario existe
+    // En realidad usamos fetchSignInMethodsForEmail
+    try {
+      const methods = await AUTH.fetchSignInMethodsForEmail(user.email);
+      authState.isSetup = methods.length === 0;
+    } catch(e) {
+      authState.isSetup = true;
+    }
+  } else {
+    // localStorage: check if PIN hash exists
+    const stored = localStorage.getItem('pin_' + user.id);
+    authState.isSetup = !stored;
+  }
+
+  const label = document.getElementById('pinLabel');
+  const note  = document.getElementById('pinSetupNote');
+  if (label) label.textContent = authState.isSetup ? 'Elige tu PIN (4 dígitos)' : 'Introduce tu PIN';
+  if (note)  note.style.display = authState.isSetup ? 'block' : 'none';
+  clearPinError();
+  updatePinDots();
+  showLoginStep(2);
+}
+
+// PIN pad input
+document.addEventListener('click', e => {
+  const key = e.target.closest('[data-pin]');
+  if (!key) return;
+  const val = key.getAttribute('data-pin');
+
+  if (val === 'back') {
+    authState.pin = authState.pin.slice(0, -1);
+    updatePinDots();
+    clearPinError();
+    return;
+  }
+
+  if (authState.pin.length >= 4) return;
+  authState.pin += val;
+  updatePinDots();
+
+  if (authState.pin.length === 4) {
+    setTimeout(submitPin, 150);
+  }
+}, { passive: true });
+
+async function submitPin() {
+  const user = authState.selectedUser;
+  if (!user) return;
+
+  const pinLabel = document.getElementById('pinLabel');
+  if (pinLabel) pinLabel.textContent = 'Verificando...';
+
+  if (USE_FIREBASE && AUTH) {
+    const password = 'PIN_' + authState.pin + '_HOGAR';
+    try {
+      if (authState.isSetup) {
+        await AUTH.createUserWithEmailAndPassword(user.email, password);
+      } else {
+        await AUTH.signInWithEmailAndPassword(user.email, password);
+      }
+      // onAuthStateChanged will handle the rest
+    } catch(err) {
+      authState.pin = '';
+      updatePinDots();
+      const msg = err.code === 'auth/wrong-password' ? 'PIN incorrecto, inténtalo de nuevo'
+                : err.code === 'auth/too-many-requests' ? 'Demasiados intentos. Espera un momento'
+                : 'Error: ' + err.message;
+      setPinError(msg);
+      if (pinLabel) pinLabel.textContent = authState.isSetup ? 'Elige tu PIN (4 dígitos)' : 'Introduce tu PIN';
+    }
+  } else {
+    // localStorage mode
+    const stored = localStorage.getItem('pin_' + user.id);
+    if (authState.isSetup) {
+      localStorage.setItem('pin_' + user.id, authState.pin);
+      loginSuccess(user);
+    } else if (stored === authState.pin) {
+      loginSuccess(user);
+    } else {
+      authState.pin = '';
+      updatePinDots();
+      setPinError('PIN incorrecto, inténtalo de nuevo');
+      if (pinLabel) pinLabel.textContent = 'Introduce tu PIN';
+    }
+  }
+}
+
+function loginSuccess(user) {
+  authState.currentUser = user;
+  // Store current user for quick re-open
+  localStorage.setItem('hogar_last_user', user.id);
+  hideLoginScreen();
+}
+
+function hideLoginScreen() {
+  const ls = document.getElementById('loginScreen');
+  if (ls) { ls.classList.add('fade'); setTimeout(() => ls.style.display = 'none', 350); }
+}
+
+function showLoginScreen() {
+  authState.pin = '';
+  authState.selectedUser = null;
+  authState.isSetup = false;
+  const ls = document.getElementById('loginScreen');
+  if (ls) { ls.style.display = 'flex'; ls.classList.remove('fade'); }
+  showLoginStep(1);
+  renderUserCards();
+  updatePinDots();
+}
+
+function logout() {
+  if (USE_FIREBASE && AUTH) {
+    AUTH.signOut();
+  }
+  authState.currentUser = null;
+  localStorage.removeItem('hogar_last_user');
+  showLoginScreen();
+}
+
+function initAuth() {
+  showLoginScreen();
+  if (USE_FIREBASE && AUTH) {
+    AUTH.onAuthStateChanged(firebaseUser => {
+      if (firebaseUser) {
+        // Match Firebase user to FAMILY_USERS by email
+        const user = FAMILY_USERS.find(u => u.email === firebaseUser.email);
+        if (user) loginSuccess(user);
+      } else {
+        // Not logged in — check if we have a last user in localStorage for UX convenience
+        showLoginScreen();
+      }
+    });
+  }
+}
+
+// Shake keyframe (inject once)
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}';
+document.head.appendChild(shakeStyle);
+
+// ══════════════════════════════════════════════
+// REALTIME LISTENER
+// ══════════════════════════════════════════════
+function applyData(d) {
+  if(typeof d.ingresos==='number')    S.ingresos=d.ingresos;
+  if(typeof d.saldoAhorro==='number') S.saldoAhorro=d.saldoAhorro;
+  if(typeof d.diaInicio==='number')   S.diaInicio=d.diaInicio;
+  if(typeof d.diaFin==='number')      S.diaFin=d.diaFin;
+  if(typeof d.mesActual==='number')   S.mesActual=d.mesActual;
+  if(typeof d.mesFin==='number')      S.mesFin=d.mesFin;
+  if(Array.isArray(d.gastosFijos))    S.gastosFijos=d.gastosFijos;
+  if(Array.isArray(d.metas))          S.metas=d.metas;
+  if(d.historico&&typeof d.historico==='object') S.historico=d.historico;
+  const k=mesKey(), md=S.historico?.[k];
+  S.gastosVariables=Array.isArray(md?.gastosVariables)?md.gastosVariables:[];
+}
+
+function startRealtime() {
+  // Cargar localStorage siempre (como cache inicial)
+  const cached = lsLoad();
+  if (cached) { applyData(cached); }
+
+  if (USE_FIREBASE && REF) {
+    REF.onSnapshot(snap=>{
+      try {
+        if(!snap.exists){ S.loading=false; hideLoading(); return; }
+        if(UI.editingField){ S.loading=false; hideLoading(); return; }
+        UI.applyingRemote=true;
+        applyData(snap.data()||{});
+        S.loading=false;
+        if(typeof loadTimeout!=='undefined') clearTimeout(loadTimeout);
+        setTimeout(()=>{UI.applyingRemote=false;},0);
+        hideLoading(); render();
+      } catch(err){ console.error(err); hideLoading(); render(); }
+    }, err=>{console.error(err); S.loading=false; hideLoading(); render();});
+  } else {
+    // Sin Firebase: usar solo localStorage
+    S.loading=false;
+    hideLoading();
+    render();
+  }
+}
+
+function hideLoading() {
+  const s=document.getElementById('loadingScreen');
+  if(s){ s.classList.add('fade'); setTimeout(()=>s.remove(),500); }
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+(function setVh(){
+  const set=()=>document.documentElement.style.setProperty('--vh',(window.innerHeight*.01)+'px');
+  set(); window.addEventListener('resize',set,{passive:true});
+})();
+
+window.addEventListener('error', e=>{
+  hideLoading();
+  const root=document.getElementById('appContent');
+  if(root) root.innerHTML=`<div class="err-box">ERROR:\n\n${String(e.error?.stack||e.message||e)}</div>`;
+});
+window.addEventListener('unhandledrejection', e=>{
+  console.error('Unhandled rejection:', e.reason);
+  hideLoading();
+});
+
+// Fallback: si Firebase no responde en 8s, mostramos la app
+const loadTimeout = setTimeout(()=>{
+  if(S.loading){ S.loading=false; hideLoading(); render(); }
+}, 8000);
+
+// Arrancar: primero auth, luego datos
+initAuth();
+startRealtime();
+</script>
 </body>
 </html>
