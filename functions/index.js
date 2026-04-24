@@ -4,9 +4,16 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 setGlobalOptions({ maxInstances: 5, region: "europe-west1" });
 
+const ALLOWED_ORIGIN = "https://gastos-familia-marce.web.app";
+
 exports.getMensajeCoach = onRequest(
-  { secrets: ["ANTHROPIC_API_KEY"], cors: true },
+  { secrets: ["ANTHROPIC_API_KEY"] },
   async (req, res) => {
+    res.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
     if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
     const { ingresos, gastadoMes, gastadoSemana, topeSemana, diasRestantes,
       proyeccion, presupuestoVariables, metas, topCategoria, topCategoriaImporte, diaSemana } = req.body;
