@@ -1507,15 +1507,12 @@ document.addEventListener('click', e => {
 }, { passive: true });
 
 async function checkUserExists(user) {
-  // fetchSignInMethodsForEmail está deprecado y deshabilitado con Email Enumeration Protection.
-  // Usamos localStorage como fuente de verdad para saber si es primer uso.
-  const wasSetup = localStorage.getItem('hogar_setup_' + user.id);
-  authState.isSetup = !wasSetup;
-
+  // La app siempre muestra la pantalla de PIN. submitPin decide si hacer login o registro.
+  authState.isSetup = false;
   const label = document.getElementById('pinLabel');
   const note  = document.getElementById('pinSetupNote');
-  if (label) label.textContent = authState.isSetup ? 'Elige tu PIN (4 dígitos)' : 'Introduce tu PIN';
-  if (note)  note.style.display = authState.isSetup ? 'block' : 'none';
+  if (label) label.textContent = 'Introduce tu PIN';
+  if (note)  note.style.display = 'none';
   clearPinError();
   updatePinDots();
   showLoginStep(2);
@@ -1553,20 +1550,26 @@ async function submitPin() {
   if (USE_FIREBASE && AUTH) {
     const password = 'PIN_' + authState.pin + '_HOGAR';
     try {
-      // Intentar siempre sign-in primero; si el usuario no existe, crearlo.
+      // Intentar sign-in primero. Si el usuario no existe en Firebase, registrarlo.
       try {
         await AUTH.signInWithEmailAndPassword(user.email, password);
       } catch(signInErr) {
         if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
-          // Primera vez: crear usuario
-          await AUTH.createUserWithEmailAndPassword(user.email, password);
-          localStorage.setItem('hogar_setup_' + user.id, '1');
-          authState.isSetup = false;
+          // Usuario no existe (o no encontrado con ese PIN): intentar crear cuenta
+          try {
+            await AUTH.createUserWithEmailAndPassword(user.email, password);
+          } catch(createErr) {
+            // Si ya existe pero el PIN es incorrecto → auth/email-already-in-use
+            if (createErr.code === 'auth/email-already-in-use') {
+              throw { code: 'auth/wrong-password' };
+            }
+            throw createErr;
+          }
         } else {
           throw signInErr;
         }
       }
-      // onAuthStateChanged will handle the rest
+      // onAuthStateChanged gestiona el resto
     } catch(err) {
       authState.pin = '';
       updatePinDots();
@@ -1576,14 +1579,13 @@ async function submitPin() {
                     ? 'Demasiados intentos. Espera un momento'
                 : 'Error: ' + err.message;
       setPinError(msg);
-      if (pinLabel) pinLabel.textContent = authState.isSetup ? 'Elige tu PIN (4 dígitos)' : 'Introduce tu PIN';
+      if (pinLabel) pinLabel.textContent = 'Introduce tu PIN';
     }
   } else {
     // localStorage mode
     const stored = localStorage.getItem('pin_' + user.id);
-    if (authState.isSetup) {
+    if (!stored) {
       localStorage.setItem('pin_' + user.id, authState.pin);
-      localStorage.setItem('hogar_setup_' + user.id, '1');
       loginSuccess(user);
     } else if (stored === authState.pin) {
       loginSuccess(user);
