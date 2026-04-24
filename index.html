@@ -604,7 +604,7 @@ async function fetchMensajeIA() {
   if (aiMsg.cargando) return;
   aiMsg.cargando = true;
   aiMsg.error = false;
-  renderTab('hogar');
+  render();
 
   const b = getBudget();
   const catEntries = Object.entries(b.porCat).filter(([,v])=>v>0).sort(([,a],[,b_])=>b_-a);
@@ -639,7 +639,7 @@ async function fetchMensajeIA() {
     console.error('Error IA:', e);
   }
   aiMsg.cargando = false;
-  renderTab('hogar');
+  render();
 }
 
 // Pedir mensaje IA al arrancar (con delay para no bloquear)
@@ -883,9 +883,18 @@ function renderCoach() {
     </div>
 
     <div class="coach-card">
-      <div class="coach-label">TU COACH DICE</div>
-      <div class="coach-text">"${msg}"</div>
-      <div class="coach-sub">${sub}</div>
+      <div class="flex-bc mb-8">
+        <div class="coach-label">TU COACH DICE</div>
+        <button style="background:transparent;border:none;color:var(--t300);font-size:18px;cursor:pointer;padding:2px" data-action="refresh-ia">↻</button>
+      </div>
+      ${aiMsg.cargando
+        ? `<div style="height:14px;background:rgba(255,255,255,.3);border-radius:6px;margin-bottom:8px;animation:shimmer 1.5s ease-in-out infinite"></div>
+           <div style="height:14px;background:rgba(255,255,255,.3);border-radius:6px;width:75%;animation:shimmer 1.5s ease-in-out infinite .3s"></div>`
+        : aiMsg.texto
+          ? `<div class="coach-text">"${escH(aiMsg.texto)}"</div>`
+          : `<div class="coach-text">"${msg}"</div>
+             <div class="coach-sub">${sub}</div>`
+      }
     </div>
 
     ${topCatInfo?`
