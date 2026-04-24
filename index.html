@@ -1600,9 +1600,9 @@ async function submitPin() {
 
 function loginSuccess(user) {
   authState.currentUser = user;
-  // Store current user for quick re-open
   localStorage.setItem('hogar_last_user', user.id);
   hideLoginScreen();
+  startRealtime();
 }
 
 function hideLoginScreen() {
@@ -1714,9 +1714,8 @@ const loadTimeout = setTimeout(()=>{
   if(S.loading){ S.loading=false; hideLoading(); render(); }
 }, 8000);
 
-// Arrancar: primero auth, luego datos
+// Arrancar: solo auth. startRealtime() se llama desde loginSuccess() tras autenticar.
 initAuth();
-startRealtime();
 </script>
 </body>
 </html>
