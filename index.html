@@ -450,6 +450,8 @@ try {
     });
     REF = firebase.firestore().collection('gastos').doc('data');
     AUTH = firebase.auth();
+    // Sin persistencia: la app siempre pide PIN al abrir (comportamiento esperado para app familiar)
+    AUTH.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(() => {});
     USE_FIREBASE = true;
   }
 } catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
