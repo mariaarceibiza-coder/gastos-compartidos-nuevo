@@ -450,8 +450,8 @@ try {
     });
     REF = firebase.firestore().collection('gastos').doc('data');
     AUTH = firebase.auth();
-    // Sin persistencia: la app siempre pide PIN al abrir (comportamiento esperado para app familiar)
-    AUTH.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(() => {});
+    // Auth anónima para que Firestore permita acceso (reglas: request.auth != null)
+    AUTH.signInAnonymously().catch(() => {});
     USE_FIREBASE = true;
   }
 } catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
@@ -1540,61 +1540,25 @@ document.addEventListener('click', e => {
   }
 }, { passive: true });
 
-async function submitPin() {
+function submitPin() {
   const user = authState.selectedUser;
   if (!user) return;
 
   const pinLabel = document.getElementById('pinLabel');
   if (pinLabel) pinLabel.textContent = 'Verificando...';
 
-  if (USE_FIREBASE && AUTH) {
-    const password = 'PIN_' + authState.pin + '_HOGAR';
-    try {
-      // Intentar sign-in primero. Si el usuario no existe en Firebase, registrarlo.
-      try {
-        await AUTH.signInWithEmailAndPassword(user.email, password);
-      } catch(signInErr) {
-        if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
-          // Usuario no existe (o no encontrado con ese PIN): intentar crear cuenta
-          try {
-            await AUTH.createUserWithEmailAndPassword(user.email, password);
-          } catch(createErr) {
-            // Si ya existe pero el PIN es incorrecto → auth/email-already-in-use
-            if (createErr.code === 'auth/email-already-in-use') {
-              throw { code: 'auth/wrong-password' };
-            }
-            throw createErr;
-          }
-        } else {
-          throw signInErr;
-        }
-      }
-      loginSuccess(user);
-    } catch(err) {
-      authState.pin = '';
-      updatePinDots();
-      const msg = err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
-                    ? 'PIN incorrecto, inténtalo de nuevo'
-                : err.code === 'auth/too-many-requests'
-                    ? 'Demasiados intentos. Espera un momento'
-                : 'Error: ' + err.message;
-      setPinError(msg);
-      if (pinLabel) pinLabel.textContent = 'Introduce tu PIN';
-    }
+  // PIN verificado en localStorage. Firebase Auth anónima gestiona el acceso a Firestore.
+  const stored = localStorage.getItem('pin_' + user.id);
+  if (!stored) {
+    localStorage.setItem('pin_' + user.id, authState.pin);
+    loginSuccess(user);
+  } else if (stored === authState.pin) {
+    loginSuccess(user);
   } else {
-    // localStorage mode
-    const stored = localStorage.getItem('pin_' + user.id);
-    if (!stored) {
-      localStorage.setItem('pin_' + user.id, authState.pin);
-      loginSuccess(user);
-    } else if (stored === authState.pin) {
-      loginSuccess(user);
-    } else {
-      authState.pin = '';
-      updatePinDots();
-      setPinError('PIN incorrecto, inténtalo de nuevo');
-      if (pinLabel) pinLabel.textContent = 'Introduce tu PIN';
-    }
+    authState.pin = '';
+    updatePinDots();
+    setPinError('PIN incorrecto, inténtalo de nuevo');
+    if (pinLabel) pinLabel.textContent = 'Introduce tu PIN';
   }
 }
 
@@ -1602,7 +1566,18 @@ function loginSuccess(user) {
   authState.currentUser = user;
   localStorage.setItem('hogar_last_user', user.id);
   hideLoginScreen();
-  startRealtime();
+  // Si ya hay sesión anónima activa, arrancar directamente; si no, esperar.
+  if (USE_FIREBASE && AUTH) {
+    if (AUTH.currentUser) {
+      startRealtime();
+    } else {
+      const unsub = AUTH.onAuthStateChanged(fbUser => {
+        if (fbUser) { unsub(); startRealtime(); }
+      });
+    }
+  } else {
+    startRealtime();
+  }
 }
 
 function hideLoginScreen() {
@@ -1622,20 +1597,16 @@ function showLoginScreen() {
 }
 
 function logout() {
-  if (USE_FIREBASE && AUTH) {
-    AUTH.signOut();
-  }
   authState.currentUser = null;
   localStorage.removeItem('hogar_last_user');
   showLoginScreen();
+  // Sesión anónima de Firebase se mantiene activa para que Firestore siga funcionando.
 }
 
 function initAuth() {
   showLoginScreen();
-  if (USE_FIREBASE && AUTH) {
-    // Cerrar sesión siempre al abrir la app para que el PIN sea obligatorio cada vez
-    AUTH.signOut().catch(() => {});
-  }
+  // La sesión anónima de Firebase se mantiene activa para Firestore.
+  // El PIN es la puerta de entrada a la UI, gestionado por localStorage.
 }
 
 // Shake keyframe (inject once)
