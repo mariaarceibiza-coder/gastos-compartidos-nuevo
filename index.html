@@ -1569,7 +1569,7 @@ async function submitPin() {
           throw signInErr;
         }
       }
-      // onAuthStateChanged gestiona el resto
+      loginSuccess(user);
     } catch(err) {
       authState.pin = '';
       updatePinDots();
@@ -1633,16 +1633,8 @@ function logout() {
 function initAuth() {
   showLoginScreen();
   if (USE_FIREBASE && AUTH) {
-    AUTH.onAuthStateChanged(firebaseUser => {
-      if (firebaseUser) {
-        // Match Firebase user to FAMILY_USERS by email
-        const user = FAMILY_USERS.find(u => u.email === firebaseUser.email);
-        if (user) loginSuccess(user);
-      } else {
-        // Not logged in — check if we have a last user in localStorage for UX convenience
-        showLoginScreen();
-      }
-    });
+    // Cerrar sesión siempre al abrir la app para que el PIN sea obligatorio cada vez
+    AUTH.signOut().catch(() => {});
   }
 }
 
