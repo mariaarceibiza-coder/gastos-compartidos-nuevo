@@ -7,6 +7,10 @@ setGlobalOptions({ maxInstances: 5, region: "europe-west1" });
 exports.getMensajeCoach = onRequest(
   { secrets: ["ANTHROPIC_API_KEY2"], cors: true },
   async (req, res) => {
+    if (req.method === "GET") {
+      res.status(200).json({ ok: true, secret: !!process.env.ANTHROPIC_API_KEY2, len: (process.env.ANTHROPIC_API_KEY2||'').length });
+      return;
+    }
     if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
     const { ingresos, gastadoMes, gastadoSemana, topeSemana, diasRestantes,
       proyeccion, presupuestoVariables, metas, topCategoria, topCategoriaImporte, diaSemana } = req.body;
