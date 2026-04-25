@@ -5,7 +5,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 setGlobalOptions({ maxInstances: 5, region: "europe-west1" });
 
 exports.getMensajeCoach = onRequest(
-  { secrets: ["ANTHROPIC_API_KEY2"], cors: true, invoker: "public" },
+  { secrets: ["ANTHROPIC_API_KEY2"], cors: true },
   async (req, res) => {
     if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
     const { ingresos, gastadoMes, gastadoSemana, topeSemana, diasRestantes,
