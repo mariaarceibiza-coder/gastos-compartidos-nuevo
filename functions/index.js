@@ -7,16 +7,6 @@ setGlobalOptions({ maxInstances: 5, region: "europe-west1" });
 exports.getMensajeCoach = onRequest(
   { secrets: ["ANTHROPIC_API_KEY2"], cors: true },
   async (req, res) => {
-    if (req.method === "GET") {
-      try {
-        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY2 });
-        const r = await client.messages.create({ model: "claude-sonnet-4-6", max_tokens: 10, messages: [{ role: "user", content: "di hola" }] });
-        res.status(200).json({ ok: true, test: r.content[0].text });
-      } catch(e) {
-        res.status(200).json({ ok: false, error: e.message, status: e.status });
-      }
-      return;
-    }
     if (req.method !== "POST") { res.status(405).send("Method Not Allowed"); return; }
     const { ingresos, gastadoMes, gastadoSemana, topeSemana, diasRestantes,
       proyeccion, presupuestoVariables, metas, topCategoria, topCategoriaImporte, diaSemana } = req.body;
