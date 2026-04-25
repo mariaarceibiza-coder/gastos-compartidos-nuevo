@@ -31,3 +31,11 @@ jobs:
 
       - name: Deploy functions
         run: firebase deploy --only functions --project gastos-familia-marce
+
+      - name: Allow unauthenticated access
+        run: |
+          gcloud run services add-iam-policy-binding getmensajecoach \
+            --region=europe-west1 \
+            --member="allUsers" \
+            --role="roles/run.invoker" \
+            --project=gastos-familia-marce
