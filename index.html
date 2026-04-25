@@ -478,7 +478,7 @@ const CATS = [
 
 const CAT_COLORS = ['#246B3E','#B8F04A','#E85B4B','#F59E0B','#5B8DD9','#A78BFA','#34D399','#FB923C'];
 
-const MIEMBROS = [
+const MIEMBROS_DEFAULT = [
   {id:'M', nombre:'María',  color:'#2E8B52'},
   {id:'J', nombre:'Javi',   color:'#E85B4B'},
   {id:'G', nombre:'Gordo',  color:'#888888'},
@@ -493,6 +493,7 @@ const S = {
   añoActual: new Date().getFullYear(),
   ingresos: 3350,
   saldoAhorro: 0,
+  miembros: MIEMBROS_DEFAULT.map(m=>({...m})),
   gastosFijos: [
     {id:1,  categoria:'Alquiler',  presupuesto:950,   pagado:false},
     {id:2,  categoria:'Coche',     presupuesto:400,   pagado:false},
@@ -675,7 +676,7 @@ function renderHome() {
           <div class="d-md" style="margin-top:2px;color:var(--t900)">${MESES[S.mesActual]} ${S.añoActual}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="display:flex">${MIEMBROS.slice(0,2).map(m=>`<div class="avatar" style="background:${m.color}">${m.id}</div>`).join('')}</div>
+          <div style="display:flex">${S.miembros.slice(0,2).map(m=>`<div class="avatar" style="background:${m.color}">${m.id}</div>`).join('')}</div>
           ${authState.currentUser ? `<div style="font-size:11px;color:var(--t500);font-weight:600">${authState.currentUser.nombre}</div>` : ''}
         </div>
       </div>
@@ -1101,14 +1102,14 @@ function renderMetas() {
 function renderFamilia() {
   const b = getBudget();
   const porM = {};
-  MIEMBROS.forEach(m=>{ porM[m.id]=0; });
+  S.miembros.forEach(m=>{ porM[m.id]=0; });
   S.gastosVariables.forEach(g=>{
     if(g.pagadoPor) porM[g.pagadoPor]=(porM[g.pagadoPor]||0)+(Number(g.monto)||0);
   });
 
   return `
     <div class="screen-header">
-      <div class="overline mb-4">LOS ARCE · ${MIEMBROS.length} MIEMBROS</div>
+      <div class="overline mb-4">LOS ARCE · ${S.miembros.length} MIEMBROS</div>
       <div class="d-md" style="color:var(--t900)">Familia</div>
     </div>
 
@@ -1136,14 +1137,18 @@ function renderFamilia() {
       <div class="sec-title">Miembros</div>
     </div>
     <div class="p14">
-      ${MIEMBROS.map(m=>`
+      ${S.miembros.map(m=>`
         <div class="tx-item" style="margin-bottom:8px">
-          <div class="avatar-lg" style="background:${m.color}">${m.id}</div>
+          <div class="avatar-lg" style="background:${escH(m.color)}">${escH(m.id)}</div>
           <div style="flex:1">
-            <div style="font-size:14px;font-weight:700">${m.nombre}</div>
+            <div style="font-size:14px;font-weight:700">${escH(m.nombre)}</div>
             <div style="font-size:12px;color:var(--t500)">Gastos registrados: <strong>${fmt(porM[m.id]||0)} €</strong></div>
           </div>
+          ${S.miembros.length>1?`<button class="btn btn-cream btn-xs" data-action="del-miembro" data-id="${escH(m.id)}" style="color:var(--coral);font-size:18px;padding:4px 10px;line-height:1" title="Eliminar miembro">×</button>`:''}
         </div>`).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-top:4px" data-action="add-miembro">
+        + Añadir miembro
+      </button>
     </div>
 
     <div class="sec-divider"><div class="sec-title">Configuración</div></div>
@@ -1375,6 +1380,27 @@ document.addEventListener('click', e=>{
     S.metas.push({id:Date.now(),nombre:name,icono:ico,objetivo:obj,aportado:0});
     render(); scheduleSave(); return;
   }
+  if(act==='add-miembro') {
+    const nombre=prompt('Nombre del miembro:');
+    if(!nombre||!nombre.trim()) return;
+    const base=nombre.trim()[0].toUpperCase();
+    let id=base; let n=2;
+    while(S.miembros.some(m=>m.id===id)){ id=base+n++; }
+    const COLORES=['#2E8B52','#E85B4B','#5B8DD9','#F59E0B','#A78BFA','#34D399','#FB923C','#888888'];
+    const usados=S.miembros.map(m=>m.color);
+    const color=COLORES.find(c=>!usados.includes(c))||COLORES[S.miembros.length%COLORES.length];
+    S.miembros.push({id, nombre:nombre.trim(), color});
+    render(); scheduleSave(); return;
+  }
+  if(act==='del-miembro') {
+    const id=btn.dataset.id;
+    if(S.miembros.length<=1) return;
+    const m=S.miembros.find(x=>x.id===id);
+    if(!m) return;
+    if(!confirm(`¿Eliminar a ${m.nombre}?`)) return;
+    S.miembros=S.miembros.filter(x=>x.id!==id);
+    render(); scheduleSave(); return;
+  }
 },{passive:true});
 
 // ══════════════════════════════════════════════
@@ -1426,6 +1452,7 @@ async function saveNow() {
     mesActual:S.mesActual,
     mesFin:Number(S.mesFin)||0,
     metas:S.metas,
+    miembros:S.miembros,
     historico:hist
   };
   if (USE_FIREBASE && REF) {
@@ -1626,6 +1653,7 @@ function applyData(d) {
   if(typeof d.mesFin==='number')      S.mesFin=d.mesFin;
   if(Array.isArray(d.gastosFijos))    S.gastosFijos=d.gastosFijos;
   if(Array.isArray(d.metas))          S.metas=d.metas;
+  if(Array.isArray(d.miembros)&&d.miembros.length>0) S.miembros=d.miembros;
   if(d.historico&&typeof d.historico==='object') S.historico=d.historico;
   const k=mesKey(), md=S.historico?.[k];
   S.gastosVariables=Array.isArray(md?.gastosVariables)?md.gastosVariables:[];
