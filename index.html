@@ -860,29 +860,21 @@ function renderHome() {
 
     <!-- RESUMEN GASTOS -->
     <div class="card" style="margin-bottom:10px">
-      <div class="flex-bc mb-10">
-        <div>
-          <div class="overline mb-4">GASTOS FIJOS</div>
-          <div style="font-size:20px;font-weight:800">${pagCount}<span style="font-size:13px;font-weight:400;color:var(--t500)">/${S.gastosFijos.length} pagados</span></div>
+      <div class="overline mb-12">TOTAL GASTOS DEL MES</div>
+      <div style="font-size:32px;font-weight:800;color:var(--t900);margin-bottom:14px">${fmt(b.fijos + b.vars)} €</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:var(--cream);border-radius:14px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t500);margin-bottom:4px">Fijos</div>
+          <div style="font-size:19px;font-weight:800;color:var(--t900)">${fmt(b.fijos)} €</div>
+          <div style="font-size:11px;color:${pagCount===S.gastosFijos.length?'var(--g600)':'var(--amber)'};font-weight:600;margin-top:2px">${pagCount}/${S.gastosFijos.length} pagados</div>
         </div>
-        <div style="text-align:right">
-          <div class="overline mb-4">VARIABLES</div>
-          <div style="font-size:20px;font-weight:800">${fmt(b.vars)}<span style="font-size:13px;font-weight:400;color:var(--t500)"> €</span></div>
+        <div style="background:var(--cream);border-radius:14px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t500);margin-bottom:4px">Variables</div>
+          <div style="font-size:19px;font-weight:800;color:var(--t900)">${fmt(b.vars)} €</div>
+          <div style="font-size:11px;color:var(--t500);margin-top:2px">${S.gastosVariables.length} gastos</div>
         </div>
       </div>
-      <div class="track-sm mb-8">
-        <div class="fill" style="width:${pct(pagCount,S.gastosFijos.length)}%;background:${pagCount===S.gastosFijos.length?'var(--lime)':'var(--amber)'}"></div>
-      </div>
-      ${S.gastosFijos.filter(g=>!g.pagado).slice(0,3).map(g=>`
-        <div class="flex-bc" style="padding:7px 0;border-bottom:1px solid var(--cream2)">
-          <div class="flex-c gap-8">
-            <div class="check-ring" data-action="toggle-pagado" data-id="${g.id}" style="width:20px;height:20px;font-size:10px"></div>
-            <span style="font-size:13px">${escH(g.categoria)}</span>
-          </div>
-          <span style="font-size:13px;font-weight:700;color:var(--coral)">${fmt(g.presupuesto)} €</span>
-        </div>`).join('')}
-      ${S.gastosFijos.filter(g=>!g.pagado).length>3?`<div style="font-size:11px;color:var(--t500);margin-top:6px;text-align:center">+${S.gastosFijos.filter(g=>!g.pagado).length-3} más pendientes</div>`:''}
-      <button class="btn btn-cream btn-w100" style="border-radius:12px;margin-top:8px;font-size:13px" data-go="gastos">Ver y editar gastos →</button>
+      <button class="btn btn-cream btn-w100" style="border-radius:12px;font-size:13px" data-go="gastos">Ver y editar gastos →</button>
     </div>
 
     <!-- ÚLTIMOS GASTOS -->
