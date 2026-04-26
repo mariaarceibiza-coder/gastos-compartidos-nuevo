@@ -660,6 +660,17 @@ async function fetchMensajeIA() {
   const catEntries = Object.entries(b.porCat).filter(([,v])=>v>0).sort(([,a],[,b_])=>b_-a);
   const topCat = catEntries[0];
 
+  const prevHistorico = S.historico[prevKey()] || {};
+  const prevVarsArr = Array.isArray(prevHistorico.gastosVariables) ? prevHistorico.gastosVariables : [];
+  const prevPorCat = {};
+  CATS.forEach(c => { prevPorCat[c.id] = 0; });
+  prevVarsArr.forEach(g => {
+    const k = g.categoria || 'otros';
+    prevPorCat[k] = (prevPorCat[k] || 0) + (Number(g.monto) || 0);
+  });
+
+  const fijosPend = S.gastosFijos.filter(g => !g.pagado);
+
   try {
     const res = await fetch(FUNCION_URL, {
       method: 'POST',
@@ -678,7 +689,26 @@ async function fetchMensajeIA() {
         topCategoria: topCat ? topCat[0] : 'varios',
         topCategoriaImporte: topCat ? topCat[1] : 0,
         usuario: authState.currentUser?.nombre || 'los dos',
-        diaSemana: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+        diaSemana: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1,
+        categoriasDetalle: CATS
+          .filter(c => (b.porCat[c.id] || 0) > 0)
+          .map(c => ({ id: c.id, label: c.label, importe: b.porCat[c.id] }))
+          .sort((x, y) => y.importe - x.importe),
+        mesAnteriorTotal: (prevHistorico.totalGastosFijos || 0) + (prevHistorico.totalGastosVariables || 0),
+        mesAnteriorCategorias: CATS
+          .filter(c => prevPorCat[c.id] > 0)
+          .map(c => ({ id: c.id, label: c.label, importe: prevPorCat[c.id] }))
+          .sort((x, y) => y.importe - x.importe),
+        fijosPendientes: fijosPend.map(g => ({ nombre: g.categoria, importe: Number(g.presupuesto) || 0 })),
+        totalFijosPendientes: fijosPend.reduce((s, g) => s + (Number(g.presupuesto) || 0), 0),
+        metasDetalle: S.metas.map(m => ({
+          nombre: m.nombre,
+          icono: m.icono,
+          objetivo: Number(m.objetivo) || 0,
+          aportado: Number(m.aportado) || 0,
+          porcentaje: pct(Number(m.aportado) || 0, Number(m.objetivo) || 0),
+          falta: Math.max(0, (Number(m.objetivo) || 0) - (Number(m.aportado) || 0))
+        }))
       })
     });
     const data = await res.json();
