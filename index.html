@@ -61,8 +61,8 @@
       z-index:100; box-shadow:0 -4px 24px rgba(0,0,0,0.07);
     }
     .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border:none; background:transparent; cursor:pointer; padding:6px 0; }
-    .nav-icon { font-size:19px; line-height:1; transition:transform .15s; }
-    .nav-label { font-size:10px; font-weight:500; color:var(--t300); transition:color .15s; letter-spacing:.01em; }
+    .nav-icon { font-size:17px; line-height:1; transition:transform .15s; }
+    .nav-label { font-size:9px; font-weight:500; color:var(--t300); transition:color .15s; letter-spacing:.01em; }
     .nav-btn.active .nav-label { color:var(--g600); font-weight:700; }
     .nav-btn.active .nav-icon { transform:scale(1.1); }
 
@@ -348,6 +348,7 @@
 <div class="app">
   <div class="content" id="appContent">
     <div class="tab-screen active" id="tab-hogar"></div>
+    <div class="tab-screen" id="tab-gastos"></div>
     <div class="tab-screen" id="tab-coach"></div>
     <div class="tab-screen" id="tab-analisis"></div>
     <div class="tab-screen" id="tab-metas"></div>
@@ -357,6 +358,9 @@
   <nav class="bottom-nav">
     <button class="nav-btn active" data-tab="hogar">
       <span class="nav-icon">🏠</span><span class="nav-label">Hogar</span>
+    </button>
+    <button class="nav-btn" data-tab="gastos">
+      <span class="nav-icon">💸</span><span class="nav-label">Gastos</span>
     </button>
     <button class="nav-btn" data-tab="coach">
       <span class="nav-icon">🌱</span><span class="nav-label">Coach</span>
@@ -849,41 +853,54 @@ function renderHome() {
       </div>` : ''}
 
     <!-- ACCIONES -->
-    <div class="flex-c gap-10 p14 mb-12">
+    <div class="flex-c gap-10 p14 mb-10">
       <button class="btn btn-lime" style="border-radius:16px" data-action="open-add"><span style="font-size:17px">+</span> Añadir gasto</button>
-      <button class="btn btn-cream" style="border-radius:16px" data-go="analisis">📊 Ver análisis</button>
+      <button class="btn btn-cream" style="border-radius:16px" data-go="gastos">💸 Ver gastos</button>
     </div>
 
-    <!-- FIJOS -->
-    <div class="sec-divider">
-      <div class="sec-title">Gastos fijos</div>
-      <div style="font-size:12px;color:var(--t500)">${pagCount}/${S.gastosFijos.length} pagados</div>
-    </div>
-    <div class="p14">
-      ${S.gastosFijos.map(g=>`
-        <div class="fijo-item ${g.pagado?'paid':''}">
-          <div class="check-ring ${g.pagado?'on':''}" data-action="toggle-pagado" data-id="${g.id}">${g.pagado?'✓':''}</div>
-          <span style="flex:1;font-size:14px;font-weight:600;${g.pagado?'text-decoration:line-through;color:var(--t300)':''}">${escH(g.categoria)}</span>
-          <span style="font-size:13px;font-weight:700;${g.pagado?'color:var(--g600)':''}">${fmt(g.presupuesto)} €</span>
-          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-fijo" data-id="${g.id}">🗑</button>
+    <!-- RESUMEN GASTOS -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="flex-bc mb-10">
+        <div>
+          <div class="overline mb-4">GASTOS FIJOS</div>
+          <div style="font-size:20px;font-weight:800">${pagCount}<span style="font-size:13px;font-weight:400;color:var(--t500)">/${S.gastosFijos.length} pagados</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="overline mb-4">VARIABLES</div>
+          <div style="font-size:20px;font-weight:800">${fmt(b.vars)}<span style="font-size:13px;font-weight:400;color:var(--t500)"> €</span></div>
+        </div>
+      </div>
+      <div class="track-sm mb-8">
+        <div class="fill" style="width:${pct(pagCount,S.gastosFijos.length)}%;background:${pagCount===S.gastosFijos.length?'var(--lime)':'var(--amber)'}"></div>
+      </div>
+      ${S.gastosFijos.filter(g=>!g.pagado).slice(0,3).map(g=>`
+        <div class="flex-bc" style="padding:7px 0;border-bottom:1px solid var(--cream2)">
+          <div class="flex-c gap-8">
+            <div class="check-ring" data-action="toggle-pagado" data-id="${g.id}" style="width:20px;height:20px;font-size:10px"></div>
+            <span style="font-size:13px">${escH(g.categoria)}</span>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:var(--coral)">${fmt(g.presupuesto)} €</span>
         </div>`).join('')}
-      <button class="btn btn-cream btn-w100" style="border-radius:14px;margin-top:4px;margin-bottom:8px" data-action="add-fijo">+ Añadir fijo</button>
+      ${S.gastosFijos.filter(g=>!g.pagado).length>3?`<div style="font-size:11px;color:var(--t500);margin-top:6px;text-align:center">+${S.gastosFijos.filter(g=>!g.pagado).length-3} más pendientes</div>`:''}
+      <button class="btn btn-cream btn-w100" style="border-radius:12px;margin-top:8px;font-size:13px" data-go="gastos">Ver y editar gastos →</button>
     </div>
 
     <!-- ÚLTIMOS GASTOS -->
     ${recientes.length>0 ? `
-      <div class="sec-divider"><div class="sec-title">Últimos gastos</div></div>
+      <div class="sec-divider">
+        <div class="sec-title">Últimos gastos</div>
+        <div class="sec-action" data-go="gastos">Ver todos →</div>
+      </div>
       <div class="p14 mb-8">
-        ${recientes.map(g=>`<div class="tx-item">
+        ${recientes.slice(0,3).map(g=>`<div class="tx-item">
           <div class="tx-ico">${cat(g.categoria).icon}</div>
           <div style="flex:1">
             <div class="tx-name">${escH(g.descripcion||cat(g.categoria).label)}</div>
             <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha||'')}</div>
           </div>
           <div class="tx-amt">${fmt(g.monto)} €</div>
-          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-variable" data-id="${g.id}">🗑</button>
         </div>`).join('')}
-      </div>` : `<div class="empty">Sin gastos variables este mes</div>`}
+      </div>` : ''}
     <div style="height:8px"></div>
   `;
 }
@@ -1261,13 +1278,86 @@ function renderFamilia() {
 }
 
 // ══════════════════════════════════════════════
+// RENDER — GASTOS
+// ══════════════════════════════════════════════
+function renderGastos() {
+  const {fijos, vars, pagados} = getTotals();
+  const pagCount = S.gastosFijos.filter(g=>g.pagado).length;
+  const todos = [...S.gastosVariables].sort((a,b_)=>new Date(b_.fecha||0)-new Date(a.fecha||0));
+
+  return `
+    <div class="screen-header">
+      <div class="overline mb-4">ESTE MES</div>
+      <div class="d-md" style="color:var(--t900)">Gastos</div>
+    </div>
+
+    <!-- RESUMEN RÁPIDO -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px;margin-bottom:10px">
+      <div style="background:var(--white);border-radius:16px;padding:14px">
+        <div class="overline mb-4">FIJOS</div>
+        <div style="font-size:22px;font-weight:800;color:var(--t900)">${fmt(fijos)} €</div>
+        <div style="font-size:11px;color:${pagCount===S.gastosFijos.length?'var(--g600)':'var(--amber)'};font-weight:600;margin-top:3px">${pagCount}/${S.gastosFijos.length} pagados</div>
+      </div>
+      <div style="background:var(--white);border-radius:16px;padding:14px">
+        <div class="overline mb-4">VARIABLES</div>
+        <div style="font-size:22px;font-weight:800;color:var(--t900)">${fmt(vars)} €</div>
+        <div style="font-size:11px;color:var(--t500);margin-top:3px">${S.gastosVariables.length} gastos</div>
+      </div>
+    </div>
+
+    <!-- GASTOS FIJOS -->
+    <div class="sec-divider">
+      <div class="sec-title">Gastos fijos</div>
+      <div style="font-size:12px;color:var(--t500)">${pagCount}/${S.gastosFijos.length} pagados</div>
+    </div>
+    <div class="p14">
+      ${S.gastosFijos.map(g=>`
+        <div class="fijo-item ${g.pagado?'paid':''}">
+          <div class="check-ring ${g.pagado?'on':''}" data-action="toggle-pagado" data-id="${g.id}">${g.pagado?'✓':''}</div>
+          <input type="text" value="${escH(g.categoria)}"
+                 data-field="fijo-cat" data-id="${g.id}"
+                 style="flex:1;min-width:0;font-size:14px;font-weight:600;border:none;background:transparent;outline:none;font-family:var(--font-b);${g.pagado?'text-decoration:line-through;color:var(--t300)':'color:var(--t900)'}" />
+          <input type="number" step="0.01" value="${g.presupuesto}"
+                 data-field="fijo-pres" data-id="${g.id}"
+                 style="width:72px;font-size:13px;font-weight:700;border:none;background:transparent;outline:none;text-align:right;font-family:var(--font-b);${g.pagado?'color:var(--g600)':'color:var(--t900)'}" />
+          <span style="font-size:13px;color:var(--t500);margin-left:2px">€</span>
+          <button class="btn" style="background:transparent;padding:4px 6px;font-size:15px;color:var(--t300)" data-action="del-fijo" data-id="${g.id}">🗑</button>
+        </div>`).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:14px;margin-top:4px;margin-bottom:8px" data-action="add-fijo">+ Añadir fijo</button>
+    </div>
+
+    <!-- GASTOS VARIABLES -->
+    <div class="sec-divider">
+      <div class="sec-title">Gastos variables</div>
+      <div style="font-size:12px;color:var(--t500)">${fmt(vars)} €</div>
+    </div>
+    <div class="flex-c gap-10 p14 mb-10">
+      <button class="btn btn-lime btn-w100" style="border-radius:16px" data-action="open-add"><span style="font-size:17px">+</span> Añadir gasto</button>
+    </div>
+    <div class="p14">
+      ${todos.length>0 ? todos.map(g=>`
+        <div class="tx-item">
+          <div class="tx-ico">${cat(g.categoria).icon}</div>
+          <div style="flex:1">
+            <div class="tx-name">${escH(g.descripcion||cat(g.categoria).label)}</div>
+            <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha||'')}</div>
+          </div>
+          <div class="tx-amt">${fmt(g.monto)} €</div>
+          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-variable" data-id="${g.id}">🗑</button>
+        </div>`).join('') : '<div class="empty">Sin gastos variables este mes</div>'}
+    </div>
+    <div style="height:8px"></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
 // MAIN RENDER
 // ══════════════════════════════════════════════
 function renderTab(id) {
-  const map = {hogar:renderHome, coach:renderCoach, analisis:renderAnalisis, metas:renderMetas, familia:renderFamilia};
+  const map = {hogar:renderHome, gastos:renderGastos, coach:renderCoach, analisis:renderAnalisis, metas:renderMetas, familia:renderFamilia};
   const el = document.getElementById(`tab-${id}`);
   if (el && map[id]) el.innerHTML = map[id]();
-  ['hogar','coach','analisis','metas','familia'].forEach(t=>{
+  ['hogar','gastos','coach','analisis','metas','familia'].forEach(t=>{
     const te = document.getElementById(`tab-${t}`);
     if(te) te.classList.toggle('active', t===id);
   });
@@ -1561,7 +1651,7 @@ document.addEventListener('click', e=>{
 const protectedFields=['ingresos','saldoAhorro'];
 document.addEventListener('focusin', e=>{
   const f=e.target.dataset.field;
-  if(protectedFields.includes(f)){
+  if(protectedFields.includes(f) || (f && f.startsWith('fijo-'))){
     UI.editingField=f;
     if(UI.saveTimer){clearTimeout(UI.saveTimer);UI.saveTimer=null;}
   }
@@ -1575,6 +1665,17 @@ document.addEventListener('change', e=>{
     render(); scheduleSave();
   }
 });
+
+// Edición inline de gastos fijos (nombre e importe)
+document.addEventListener('focusout', e=>{
+  const f=e.target.dataset.field;
+  if(!f || !f.startsWith('fijo-')) return;
+  const id=Number(e.target.dataset.id);
+  if(f==='fijo-cat') S.gastosFijos=S.gastosFijos.map(x=>x.id===id?{...x,categoria:e.target.value.trim()||'Gasto'}:x);
+  if(f==='fijo-pres') S.gastosFijos=S.gastosFijos.map(x=>x.id===id?{...x,presupuesto:Number(e.target.value)||0}:x);
+  UI.editingField=null;
+  saveNow(); render();
+},true);
 
 // Nombre de la familia (al perder el foco)
 document.addEventListener('focusout', e2=>{
