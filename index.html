@@ -165,6 +165,9 @@
     .goal-pct { font-size:18px; font-weight:800; }
     .goal-pct.on  { color:var(--g600); }
     .goal-pct.off { color:var(--coral); }
+    .emoji-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px; }
+    .emoji-btn  { background:var(--cream); border:2px solid transparent; border-radius:10px; font-size:22px; padding:6px 0; cursor:pointer; text-align:center; transition:border-color .15s; }
+    .emoji-btn.selected { border-color:var(--g600); background:var(--lime); }
 
     /* ─── COACH ─── */
     .coach-card { background:var(--g600); border-radius:var(--radius); padding:20px; margin:0 14px 10px; color:white; position:relative; overflow:hidden; }
@@ -424,6 +427,32 @@
     </div>
     <div class="form-sec">
       <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveMetaBtn">Aportar →</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="editMetaOverlay">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700" id="editMetaTitle">Nueva meta</span>
+      <button class="btn btn-cream btn-xs" id="closeEditMeta">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Nombre</label>
+      <input class="form-in" type="text" placeholder="Ej: Vacaciones en Roma" id="inMetaNombre" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Objetivo (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inMetaObjetivo" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Emoji</label>
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+    <div class="form-sec" style="display:flex;gap:8px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px;flex:1" id="saveEditMetaBtn">Guardar</button>
+      <button class="btn btn-cream btn-xs" style="border-radius:16px;padding:15px;font-size:20px;display:none" id="delEditMetaBtn">🗑️</button>
     </div>
   </div>
 </div>
@@ -1096,11 +1125,14 @@ function renderMetas() {
                 <div style="font-size:12px;color:var(--t500)">${fmt(m.aportado)} € de ${fmt(m.objetivo)} €</div>
               </div>
             </div>
-            <div class="goal-pct ${on?'on':'off'}">${p}%</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="goal-pct ${on?'on':'off'}">${p}%</div>
+              <button class="btn btn-cream btn-xs" data-action="edit-meta" data-id="${m.id}" style="padding:5px 9px;font-size:13px" title="Editar meta">✏️</button>
+            </div>
           </div>
-          <div class="track"><div class="fill ${on?'fill-lime':'fill-coral'}" style="width:${p}%"></div></div>
+          <div class="track"><div class="fill ${on?'fill-lime':'fill-coral'}" style="width:${Math.min(p,100)}%"></div></div>
           <div class="flex-bc" style="margin-top:8px">
-            <span style="font-size:12px;color:var(--t300)">Faltan ${fmt(m.objetivo-m.aportado)} €</span>
+            <span style="font-size:12px;color:var(--t300)">Faltan ${fmt(Math.max(0,m.objetivo-m.aportado))} €</span>
             <button class="btn-ghost btn-xs" data-action="aportar-meta" data-id="${m.id}">+ aportar →</button>
           </div>
         </div>`;
@@ -1375,6 +1407,70 @@ document.getElementById('saveMetaBtn').addEventListener('click', ()=>{
 });
 
 // ══════════════════════════════════════════════
+// EDITAR / CREAR META
+// ══════════════════════════════════════════════
+const META_EMOJIS = ['✈️','🏖️','🏠','🚗','💻','📱','🎓','💍','🛡️','🎒','🐶','🌍','🎸','🎨','💰','🎁','👶','🌱','🏋️','⛷️','🏊','🚀','🎯','🏆','🛒','🎉','🌺','🍕'];
+let _editMetaId = null;
+let _editMetaEmoji = META_EMOJIS[0];
+
+function openEditMetaSheet(id) {
+  _editMetaId = id || null;
+  const m = id ? S.metas.find(x => x.id === Number(id)) : null;
+  _editMetaEmoji = m?.icono || META_EMOJIS[0];
+
+  document.getElementById('editMetaTitle').textContent = m ? 'Editar meta' : 'Nueva meta';
+  document.getElementById('inMetaNombre').value = m?.nombre || '';
+  document.getElementById('inMetaObjetivo').value = m?.objetivo || '';
+  document.getElementById('delEditMetaBtn').style.display = m ? '' : 'none';
+
+  const grid = document.getElementById('emojiGrid');
+  grid.innerHTML = META_EMOJIS.map(e =>
+    `<button class="emoji-btn${e===_editMetaEmoji?' selected':''}" data-emoji="${e}">${e}</button>`
+  ).join('');
+
+  document.getElementById('editMetaOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEditMeta() {
+  document.getElementById('editMetaOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('closeEditMeta').addEventListener('click', closeEditMeta);
+document.getElementById('editMetaOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('editMetaOverlay')) closeEditMeta();
+});
+document.getElementById('emojiGrid').addEventListener('click', e=>{
+  const btn = e.target.closest('.emoji-btn');
+  if (!btn) return;
+  _editMetaEmoji = btn.dataset.emoji;
+  document.getElementById('emojiGrid').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b===btn));
+});
+document.getElementById('saveEditMetaBtn').addEventListener('click', ()=>{
+  const nombre = document.getElementById('inMetaNombre').value.trim();
+  if (!nombre) return;
+  const objetivo = Number(document.getElementById('inMetaObjetivo').value||0);
+  if (_editMetaId) {
+    S.metas = S.metas.map(m => m.id===Number(_editMetaId)
+      ? {...m, nombre, objetivo, icono: _editMetaEmoji}
+      : m);
+  } else {
+    S.metas.push({id: Date.now(), nombre, icono: _editMetaEmoji, objetivo, aportado: 0});
+  }
+  closeEditMeta();
+  render();
+  scheduleSave();
+});
+document.getElementById('delEditMetaBtn').addEventListener('click', ()=>{
+  if (!_editMetaId) return;
+  const m = S.metas.find(x => x.id === Number(_editMetaId));
+  if (m && !confirm(`¿Eliminar la meta "${m.nombre}"?`)) return;
+  S.metas = S.metas.filter(x => x.id !== Number(_editMetaId));
+  closeEditMeta();
+  render();
+  scheduleSave();
+});
+
+// ══════════════════════════════════════════════
 // EVENT DELEGATION
 // ══════════════════════════════════════════════
 document.addEventListener('click', e=>{
@@ -1421,14 +1517,8 @@ document.addEventListener('click', e=>{
     S.gastosFijos.push({id:newId,categoria:'Nuevo gasto',presupuesto:0,pagado:false});
     render(); scheduleSave(); return;
   }
-  if(act==='add-meta') {
-    const name=prompt('Nombre de la meta:');
-    if(!name) return;
-    const obj=Number(prompt('Objetivo en €:')||0);
-    const ico=prompt('Emoji icono (ej: 🏖️):')||'💰';
-    S.metas.push({id:Date.now(),nombre:name,icono:ico,objetivo:obj,aportado:0});
-    render(); scheduleSave(); return;
-  }
+  if(act==='add-meta')  { openEditMetaSheet(null); return; }
+  if(act==='edit-meta') { openEditMetaSheet(btn.dataset.id); return; }
   if(act==='invite-miembro') { openInviteSheet(); return; }
   if(act==='change-my-color') {
     const newColor = btn.dataset.color;
