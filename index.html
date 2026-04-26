@@ -544,20 +544,36 @@ function getTotals() {
   return { fijos, vars, pagados, pendientes: fijos-pagados };
 }
 
+function getPeriodo() {
+  const diaIni = Math.min(Math.max(Number(S.diaInicio) || 1, 1), 28);
+  const hoy = new Date();
+  const dNum = hoy.getDate();
+  // Si hoy >= diaIni el período empezó este mes, si no, el mes pasado
+  let pMes = hoy.getMonth(), pAño = hoy.getFullYear();
+  if (dNum < diaIni) { pMes--; if (pMes < 0) { pMes = 11; pAño--; } }
+  const inicio = new Date(pAño, pMes, diaIni);
+  // El período termina el día anterior a diaIni del mes siguiente
+  // new Date(año, mes, 0) devuelve el último día del mes anterior → correcto para diaIni=1 también
+  let fMes = pMes + 1, fAño = pAño;
+  if (fMes > 11) { fMes = 0; fAño++; }
+  const fin = new Date(fAño, fMes, diaIni - 1 || new Date(fAño, fMes, 0).getDate());
+  const diasTotal = Math.round((fin - inicio) / 86400000) + 1;
+  const diasR     = Math.max(0, Math.round((fin - hoy) / 86400000));
+  const diasHoy   = Math.max(1, diasTotal - diasR);
+  return { inicio, fin, diasTotal, diasR, diasHoy };
+}
+
 function getBudget() {
   const {fijos,vars,pagados} = getTotals();
-  const ing  = Number(S.ingresos)||0;
-  const gast = pagados + vars;
-  const saldo = ing - gast;
+  const ing      = Number(S.ingresos)||0;
+  const gast     = pagados + vars;
+  const saldo    = ing - gast;
   const presVars = ing - fijos;
 
-  const hoy  = new Date();
-  const esHoy = hoy.getMonth()===S.mesActual && hoy.getFullYear()===S.añoActual;
-  const diasMes = new Date(S.añoActual,S.mesActual+1,0).getDate();
-  const diaHoy  = esHoy ? hoy.getDate() : diasMes;
-  const diasR   = Math.max(0, diasMes - diaHoy);
-  const promDia = diaHoy > 0 ? vars/diaHoy : 0;
-  const proy    = vars + promDia*diasR;
+  const hoy = new Date();
+  const { inicio, fin, diasTotal, diasR, diasHoy } = getPeriodo();
+  const promDia = diasHoy > 0 ? vars / diasHoy : 0;
+  const proy    = vars + promDia * diasR;
   const dif     = presVars - proy;
 
   // Semana
@@ -567,7 +583,7 @@ function getBudget() {
     if(!g.fecha) return false;
     const d=new Date(g.fecha); return d>=iniSem && d<=hoy;
   }).reduce((s,g)=>s+(Number(g.monto)||0),0);
-  const topeSem = Math.round(presVars / (diasMes/7));
+  const topeSem = Math.round(presVars / (diasTotal/7));
   const pctSem  = pct(gastSem, topeSem);
 
   // Por categoría
@@ -578,8 +594,9 @@ function getBudget() {
     porCat[k]=(porCat[k]||0)+(Number(g.monto)||0);
   });
 
-  return {ing,gast,saldo,pagados,fijos,vars,presVars,dif,proy,diasR,promDia,diaHoy,diasMes,
-    gastSem,topeSem,pctSem,porCat,
+  return {ing,gast,saldo,pagados,fijos,vars,presVars,dif,proy,
+    diasR, promDia, diaHoy:diasHoy, diasMes:diasTotal,
+    gastSem,topeSem,pctSem,porCat, periodoInicio:inicio, periodoFin:fin,
     estado: dif>=0?'bien': dif>=-100?'ajustado':'peligro'};
 }
 
@@ -672,7 +689,7 @@ function renderHome() {
       <div class="flex-bc mb-8">
         <div>
           <div class="overline">FAMILIA ARCE</div>
-          <div class="d-md" style="margin-top:2px;color:var(--t900)">${MESES[S.mesActual]} ${S.añoActual}</div>
+          <div class="d-md" style="margin-top:2px;color:var(--t900)">${(()=>{const p=getPeriodo(),dIni=Number(S.diaInicio)||1;return dIni===1?`${MESES[S.mesActual]} ${S.añoActual}`:`${p.inicio.getDate()} ${MESES_C[p.inicio.getMonth()]} – ${p.fin.getDate()} ${MESES_C[p.fin.getMonth()]}`;})()}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="display:flex">${S.miembros.slice(0,2).map(m=>`<div class="avatar" style="background:${m.color}">${m.id}</div>`).join('')}</div>
@@ -1154,6 +1171,28 @@ function renderFamilia() {
 
     <div class="sec-divider"><div class="sec-title">Configuración</div></div>
     <div class="p14">
+
+      <!-- Período del mes -->
+      <div class="card" style="margin:0 0 10px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">Período mensual</div>
+        <div style="font-size:12px;color:var(--t500);margin-bottom:12px">¿Qué día empieza tu mes?</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;color:var(--t700)">Del día</span>
+          <select data-field="diaInicio" style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--cream3);background:var(--cream);font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none;flex-shrink:0">
+            ${Array.from({length:28},(_,i)=>`<option value="${i+1}" ${(S.diaInicio||1)===i+1?'selected':''}>${i+1}</option>`).join('')}
+          </select>
+          <span style="font-size:13px;color:var(--t500)">al ${(S.diaInicio||1)<=1?'fin de mes':`${(S.diaInicio||1)-1} del siguiente`}</span>
+        </div>
+      </div>
+
+      <!-- Nombre familia -->
+      <div class="card" style="margin:0 0 10px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Nombre de la familia</div>
+        <input type="text" value="${escH(authState.familia?.nombre||'')}" data-field="familiaNombre"
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:15px;font-family:var(--font-b);color:var(--t900);outline:none" />
+      </div>
+
+      <!-- Ingresos y ahorro -->
       <div class="card" style="margin:0 0 10px">
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">Ingresos mensuales</div>
         <input type="number" step="0.01" value="${S.ingresos}" data-field="ingresos"
@@ -1162,18 +1201,27 @@ function renderFamilia() {
         <input type="number" step="0.01" value="${S.saldoAhorro}" data-field="saldoAhorro"
           style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:18px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
       </div>
+
       <button class="btn btn-cream btn-w100" style="border-radius:16px;margin-bottom:8px" data-action="open-historico">
         📊 Ver histórico de meses
       </button>
       ${S.synced ? `<div style="text-align:center;font-size:12px;color:var(--g600);font-weight:600;padding:8px">✓ Datos sincronizados<span class="synced-dot"></span></div>` : ''}
+
+      <!-- Perfil del usuario -->
       ${authState.currentUser ? `
-        <div style="background:var(--cream);border-radius:16px;padding:14px 16px;margin-top:6px;display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:50%;background:${authState.currentUser.color};display:flex;align-items:center;justify-content:center;color:white;font-weight:700">${authState.currentUser.id}</div>
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:700">${authState.currentUser.nombre}</div>
-            <div style="font-size:11px;color:var(--t500)">${authState.currentUser.email || 'Sesión activa'}</div>
+        <div style="background:var(--cream);border-radius:16px;padding:14px 16px;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${authState.currentUser.color};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0">${authState.currentUser.id}</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700">${authState.currentUser.nombre}</div>
+              <div style="font-size:11px;color:var(--t500)">${authState.currentUser.email || 'Sesión activa'}</div>
+            </div>
+            <button class="btn btn-cream btn-xs" data-action="logout" style="color:var(--coral)">Salir</button>
           </div>
-          <button class="btn btn-cream btn-xs" data-action="logout" style="color:var(--coral)">Salir</button>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t500);margin-bottom:8px">Tu color</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${MEMBER_COLORS.map(c=>`<div class="color-swatch ${c===authState.currentUser.color?'selected':''}" style="background:${c};width:28px;height:28px" data-action="change-my-color" data-color="${c}"></div>`).join('')}
+          </div>
         </div>` : ''}
     </div>
     <div style="height:8px"></div>
@@ -1382,6 +1430,19 @@ document.addEventListener('click', e=>{
     render(); scheduleSave(); return;
   }
   if(act==='invite-miembro') { openInviteSheet(); return; }
+  if(act==='change-my-color') {
+    const newColor = btn.dataset.color;
+    if (!newColor || !authState.currentUser) return;
+    authState.currentUser.color = newColor;
+    const miembro = S.miembros.find(m => m.id === authState.currentUser.id);
+    if (miembro) miembro.color = newColor;
+    if (USE_FIREBASE && familiaDocRef && authState.currentUser.uid) {
+      const upd = {}; upd[`miembros.${authState.currentUser.uid}.color`] = newColor;
+      familiaDocRef.update(upd).catch(console.error);
+      DB.collection('users').doc(authState.currentUser.uid).update({ color: newColor }).catch(console.error);
+    }
+    render(); return;
+  }
   if(act==='del-miembro') {
     const id = btn.dataset.id;
     if (S.miembros.length <= 1) return;
@@ -1405,6 +1466,8 @@ document.addEventListener('click', e=>{
 // ══════════════════════════════════════════════
 // FIELD PROTECTION (ingresos/saldoAhorro)
 // ══════════════════════════════════════════════
+// FIELD PROTECTION (ingresos/saldoAhorro)
+// ══════════════════════════════════════════════
 const protectedFields=['ingresos','saldoAhorro'];
 document.addEventListener('focusin', e=>{
   const f=e.target.dataset.field;
@@ -1413,6 +1476,25 @@ document.addEventListener('focusin', e=>{
     if(UI.saveTimer){clearTimeout(UI.saveTimer);UI.saveTimer=null;}
   }
 },true);
+
+// Selector período del mes
+document.addEventListener('change', e=>{
+  const f = e.target.dataset.field;
+  if (f === 'diaInicio') {
+    S.diaInicio = Number(e.target.value) || 1;
+    render(); scheduleSave();
+  }
+});
+
+// Nombre de la familia (al perder el foco)
+document.addEventListener('focusout', e2=>{
+  if (e2.target.dataset.field !== 'familiaNombre') return;
+  const newName = e2.target.value.trim();
+  if (!newName || !authState.familia || newName === authState.familia.nombre) return;
+  authState.familia.nombre = newName;
+  if (USE_FIREBASE && familiaDocRef) familiaDocRef.update({ nombre: newName }).catch(console.error);
+  render();
+}, true);
 document.addEventListener('focusout', e=>{
   const f=e.target.dataset.field;
   if(protectedFields.includes(f)){
