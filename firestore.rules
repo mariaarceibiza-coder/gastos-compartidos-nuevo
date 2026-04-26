@@ -1,8 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // ── Perfiles de usuario ──────────────────────────────────────────
+    match /users/{userId} {
+      allow read:   if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+    }
+
+    // ── Familias ─────────────────────────────────────────────────────
+    match /familias/{familiaId} {
+      // Leer la familia: solo miembros
+      allow read: if request.auth != null &&
+        request.auth.uid in resource.data.miembros;
+
+      // Crear familia: cualquier usuario autenticado
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.ownerId;
+
+      // Actualizar familia: solo el admin (ownerId) puede cambiar miembros y nombre.
+      // Excepción: un miembro puede añadirse a sí mismo al aceptar una invitación.
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.ownerId ||
+        onlyAddingSelf(resource, request)
+      );
+
+      // Datos financieros: solo miembros de la familia
+      match /datos/{docId} {
+        allow read, write: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/familias/$(familiaId)).data.miembros;
+      }
+    }
+
+    // ── Invitaciones ─────────────────────────────────────────────────
+    match /invitaciones/{token} {
+      // Cualquier usuario autenticado puede leer (para verificar token al unirse)
+      allow read: if request.auth != null;
+
+      // Solo miembros de la familia pueden crear invitaciones
+      allow create: if request.auth != null &&
+        request.auth.uid in get(/databases/$(database)/documents/familias/$(request.resource.data.familiaId)).data.miembros;
+
+      // Cualquier usuario autenticado puede actualizar (para marcar como aceptada)
+      allow update: if request.auth != null;
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────
+    function onlyAddingSelf(resource, request) {
+      // Permite que el nuevo campo añadido sea únicamente el uid del solicitante
+      let existingKeys = resource.data.miembros.keys();
+      let newKeys      = request.resource.data.miembros.keys();
+      return newKeys.hasAll(existingKeys) &&
+             newKeys.removeAll(existingKeys).hasOnly([request.auth.uid]);
     }
   }
 }

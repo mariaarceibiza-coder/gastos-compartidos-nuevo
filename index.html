@@ -240,50 +240,48 @@
     .login-screen {
       position:fixed; inset:0; background:var(--cream); z-index:500;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:24px; transition:opacity .3s ease;
+      padding:24px; transition:opacity .3s ease; overflow-y:auto;
     }
     .login-screen.fade { opacity:0; pointer-events:none; }
     .login-logo { font-size:42px; margin-bottom:10px; }
-    .login-title { font-family:var(--font-d); font-size:32px; color:var(--t900); margin-bottom:4px; }
-    .login-sub { font-size:13px; color:var(--t500); margin-bottom:40px; }
-
-    .user-cards { display:flex; gap:14px; width:100%; max-width:320px; margin-bottom:32px; }
-    .user-card {
-      flex:1; background:var(--white); border-radius:20px; padding:20px 12px;
-      display:flex; flex-direction:column; align-items:center; gap:10px;
-      border:2px solid transparent; cursor:pointer; transition:all .18s;
-      box-shadow:var(--shadow);
-    }
-    .user-card:active { transform:scale(.96); }
-    .user-card.selected { border-color:var(--g600); background:#F0FBF5; }
-    .user-card-avatar {
-      width:56px; height:56px; border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-size:22px; font-weight:800; color:white;
-    }
-    .user-card-name { font-size:15px; font-weight:700; }
-
-    .pin-area { width:100%; max-width:280px; }
-    .pin-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t500); text-align:center; margin-bottom:14px; }
-    .pin-dots { display:flex; justify-content:center; gap:12px; margin-bottom:20px; }
-    .pin-dot {
-      width:14px; height:14px; border-radius:50%;
-      border:2px solid var(--cream3); background:transparent; transition:all .15s;
-    }
-    .pin-dot.filled { background:var(--g600); border-color:var(--g600); }
-    .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .pin-key {
-      background:var(--white); border:none; border-radius:14px; padding:16px;
-      font-size:20px; font-weight:600; cursor:pointer; box-shadow:var(--shadow);
-      transition:all .12s; color:var(--t900); font-family:var(--font-b);
-    }
-    .pin-key:active { transform:scale(.92); background:var(--cream2); }
-    .pin-key.del { font-size:16px; color:var(--t500); }
-    .pin-error { color:var(--coral); font-size:13px; text-align:center; margin-top:10px; min-height:18px; }
-    .pin-setup-note { font-size:12px; color:var(--t500); text-align:center; margin-top:8px; line-height:1.5; }
-
+    .login-title { font-family:var(--font-d); font-size:32px; color:var(--t900); margin-bottom:12px; }
+    .login-sub { font-size:13px; color:var(--t500); text-align:center; }
     .login-step { display:none; }
-    .login-step.active { display:block; }
+    .login-step.active { display:flex; flex-direction:column; align-items:center; width:100%; }
+    .login-form { width:100%; max-width:320px; display:flex; flex-direction:column; align-items:stretch; }
+    .login-input {
+      width:100%; padding:13px 16px; margin-bottom:10px;
+      background:var(--white); border:1.5px solid var(--cream3);
+      border-radius:14px; font-size:15px; font-family:var(--font-b);
+      color:var(--t900); outline:none; transition:border-color .15s;
+    }
+    .login-input:focus { border-color:var(--g600); }
+    .login-input::placeholder { color:var(--t300); }
+    .login-btn {
+      width:100%; padding:14px; margin-top:4px; margin-bottom:10px;
+      background:var(--g600); color:white; border:none;
+      border-radius:14px; font-size:15px; font-weight:700;
+      font-family:var(--font-b); cursor:pointer; transition:background .15s;
+    }
+    .login-btn:active { background:var(--g700); transform:scale(.98); }
+    .login-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .login-link-btn {
+      width:100%; background:none; border:none; padding:8px;
+      font-size:13px; color:var(--g600); font-weight:600;
+      font-family:var(--font-b); cursor:pointer; text-align:center;
+    }
+    .login-link-btn.muted { color:var(--t500); font-weight:400; }
+    .login-error { color:var(--coral); font-size:13px; text-align:center; min-height:18px; margin-bottom:4px; }
+    .color-picker { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+    .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .15s; }
+    .color-swatch.selected { border-color:var(--t900); transform:scale(1.15); }
+    .invite-banner {
+      background:var(--g800); color:white; border-radius:16px;
+      padding:12px 16px; margin-bottom:18px; text-align:center;
+      width:100%; max-width:320px;
+    }
+    .invite-banner-title { font-size:14px; font-weight:700; margin-bottom:3px; }
+    .invite-banner-sub { font-size:12px; opacity:.7; }
 
   </style>
 </head>
@@ -294,44 +292,45 @@
 <div class="login-screen" id="loginScreen" style="display:none">
   <div class="login-logo">🌿</div>
   <div class="login-title">Hogar</div>
-  <div class="login-sub">¿Quién eres?</div>
 
-  <!-- Step 1: Select user -->
+  <div class="invite-banner" id="inviteBanner" style="display:none">
+    <div class="invite-banner-title" id="inviteBannerTitle">Te han invitado</div>
+    <div class="invite-banner-sub">Entra o crea tu cuenta para unirte</div>
+  </div>
+
+  <!-- Paso 1: Login -->
   <div class="login-step active" id="loginStep1">
-    <div class="user-cards" id="userCards">
-      <!-- rendered by JS -->
+    <div class="login-sub" style="margin-bottom:24px">Bienvenido de nuevo</div>
+    <div class="login-form">
+      <input class="login-input" type="email" id="loginEmail" placeholder="Tu email" autocomplete="email" />
+      <input class="login-input" type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password" />
+      <div class="login-error" id="loginError"></div>
+      <button class="login-btn" id="btnLogin">Entrar</button>
+      <button class="login-link-btn" id="btnGoRegister">¿Primera vez? Crear cuenta</button>
+      <button class="login-link-btn muted" id="btnForgotPassword">¿Olvidaste la contraseña?</button>
     </div>
   </div>
 
-  <!-- Step 2: PIN -->
+  <!-- Paso 2: Registro -->
   <div class="login-step" id="loginStep2">
-    <div class="pin-area">
-      <div class="pin-label" id="pinLabel">Introduce tu PIN</div>
-      <div class="pin-dots">
-        <div class="pin-dot" id="pd0"></div>
-        <div class="pin-dot" id="pd1"></div>
-        <div class="pin-dot" id="pd2"></div>
-        <div class="pin-dot" id="pd3"></div>
+    <div class="login-sub" style="margin-bottom:24px">Crea tu cuenta</div>
+    <div class="login-form">
+      <input class="login-input" type="text" id="regNombre" placeholder="Tu nombre" autocomplete="given-name" />
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t500);margin-bottom:8px;text-align:center">Elige tu color</div>
+        <div class="color-picker" id="regColorPicker"></div>
       </div>
-      <div class="pin-pad">
-        <button class="pin-key" data-pin="1">1</button>
-        <button class="pin-key" data-pin="2">2</button>
-        <button class="pin-key" data-pin="3">3</button>
-        <button class="pin-key" data-pin="4">4</button>
-        <button class="pin-key" data-pin="5">5</button>
-        <button class="pin-key" data-pin="6">6</button>
-        <button class="pin-key" data-pin="7">7</button>
-        <button class="pin-key" data-pin="8">8</button>
-        <button class="pin-key" data-pin="9">9</button>
-        <button class="pin-key" data-pin="back" style="grid-column:1">←</button>
-        <button class="pin-key" data-pin="0">0</button>
-        <div></div>
-      </div>
-      <div class="pin-error" id="pinError"></div>
-      <div class="pin-setup-note" id="pinSetupNote" style="display:none">
-        Primera vez: este PIN quedará guardado para futuros accesos.
-      </div>
+      <input class="login-input" type="email" id="regEmail" placeholder="Tu email" autocomplete="email" />
+      <input class="login-input" type="password" id="regPassword" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password" />
+      <div class="login-error" id="regError"></div>
+      <button class="login-btn" id="btnRegister">Crear cuenta</button>
+      <button class="login-link-btn" id="btnGoLogin">¿Ya tienes cuenta? Entrar</button>
     </div>
+  </div>
+
+  <!-- Paso 3: Configurar familia (usuarios nuevos) -->
+  <div class="login-step" id="loginStep3">
+    <div id="familySetupContent"></div>
   </div>
 </div>
 
@@ -436,8 +435,10 @@
 // Firebase con fallback a localStorage
 const LS_KEY = 'hogar_gastos_data';
 let USE_FIREBASE = false;
-let REF = null;
+let DB = null;
 let AUTH = null;
+let familiaRef = null;    // familias/{id}/datos/actual — se asigna tras login
+let familiaDocRef = null; // familias/{id}              — se asigna tras login
 try {
   if (typeof firebase !== 'undefined') {
     firebase.initializeApp({
@@ -448,10 +449,8 @@ try {
       messagingSenderId: "117082983018",
       appId: "1:117082983018:web:59a5bfd4a3e015d7251813"
     });
-    REF = firebase.firestore().collection('gastos').doc('data');
+    DB = firebase.firestore();
     AUTH = firebase.auth();
-    // Auth anónima para que Firestore permita acceso (reglas: request.auth != null)
-    AUTH.signInAnonymously().catch(() => {});
     USE_FIREBASE = true;
   }
 } catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
@@ -1101,15 +1100,17 @@ function renderMetas() {
 // ══════════════════════════════════════════════
 function renderFamilia() {
   const b = getBudget();
+  const famName = authState.familia?.nombre || 'Mi Familia';
+  const isAdmin = USE_FIREBASE && authState.currentUser?.uid === authState.familia?.ownerId;
   const porM = {};
-  S.miembros.forEach(m=>{ porM[m.id]=0; });
-  S.gastosVariables.forEach(g=>{
-    if(g.pagadoPor) porM[g.pagadoPor]=(porM[g.pagadoPor]||0)+(Number(g.monto)||0);
+  S.miembros.forEach(m => { porM[m.id] = 0; });
+  S.gastosVariables.forEach(g => {
+    if (g.pagadoPor) porM[g.pagadoPor] = (porM[g.pagadoPor] || 0) + (Number(g.monto) || 0);
   });
 
   return `
     <div class="screen-header">
-      <div class="overline mb-4">LOS ARCE · ${S.miembros.length} MIEMBROS</div>
+      <div class="overline mb-4">${escH(famName.toUpperCase())} · ${S.miembros.length} MIEMBROS</div>
       <div class="d-md" style="color:var(--t900)">Familia</div>
     </div>
 
@@ -1137,17 +1138,17 @@ function renderFamilia() {
       <div class="sec-title">Miembros</div>
     </div>
     <div class="p14">
-      ${S.miembros.map(m=>`
+      ${S.miembros.map(m => `
         <div class="tx-item" style="margin-bottom:8px">
           <div class="avatar-lg" style="background:${escH(m.color)}">${escH(m.id)}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700">${escH(m.nombre)}</div>
-            <div style="font-size:12px;color:var(--t500)">Gastos registrados: <strong>${fmt(porM[m.id]||0)} €</strong></div>
+            <div style="font-size:12px;color:var(--t500)">Gastos registrados: <strong>${fmt(porM[m.id] || 0)} €</strong></div>
           </div>
-          ${S.miembros.length>1?`<button class="btn btn-cream btn-xs" data-action="del-miembro" data-id="${escH(m.id)}" style="color:var(--coral);font-size:18px;padding:4px 10px;line-height:1" title="Eliminar miembro">×</button>`:''}
+          ${isAdmin && S.miembros.length > 1 && m.id !== authState.currentUser?.id ? `<button class="btn btn-cream btn-xs" data-action="del-miembro" data-id="${escH(m.id)}" style="color:var(--coral);font-size:18px;padding:4px 10px;line-height:1" title="Eliminar miembro">×</button>` : ''}
         </div>`).join('')}
-      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-top:4px" data-action="add-miembro">
-        + Añadir miembro
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-top:4px" data-action="invite-miembro">
+        + Invitar a alguien
       </button>
     </div>
 
@@ -1164,16 +1165,16 @@ function renderFamilia() {
       <button class="btn btn-cream btn-w100" style="border-radius:16px;margin-bottom:8px" data-action="open-historico">
         📊 Ver histórico de meses
       </button>
-      ${S.synced?`<div style="text-align:center;font-size:12px;color:var(--g600);font-weight:600;padding:8px">✓ Datos sincronizados<span class="synced-dot"></span></div>`:''}
-      ${authState.currentUser?`
+      ${S.synced ? `<div style="text-align:center;font-size:12px;color:var(--g600);font-weight:600;padding:8px">✓ Datos sincronizados<span class="synced-dot"></span></div>` : ''}
+      ${authState.currentUser ? `
         <div style="background:var(--cream);border-radius:16px;padding:14px 16px;margin-top:6px;display:flex;align-items:center;gap:10px">
           <div style="width:36px;height:36px;border-radius:50%;background:${authState.currentUser.color};display:flex;align-items:center;justify-content:center;color:white;font-weight:700">${authState.currentUser.id}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700">${authState.currentUser.nombre}</div>
-            <div style="font-size:11px;color:var(--t500)">Sesión activa</div>
+            <div style="font-size:11px;color:var(--t500)">${authState.currentUser.email || 'Sesión activa'}</div>
           </div>
           <button class="btn btn-cream btn-xs" data-action="logout" style="color:var(--coral)">Salir</button>
-        </div>`:''}
+        </div>` : ''}
     </div>
     <div style="height:8px"></div>
   `;
@@ -1380,25 +1381,23 @@ document.addEventListener('click', e=>{
     S.metas.push({id:Date.now(),nombre:name,icono:ico,objetivo:obj,aportado:0});
     render(); scheduleSave(); return;
   }
-  if(act==='add-miembro') {
-    const nombre=prompt('Nombre del miembro:');
-    if(!nombre||!nombre.trim()) return;
-    const base=nombre.trim()[0].toUpperCase();
-    let id=base; let n=2;
-    while(S.miembros.some(m=>m.id===id)){ id=base+n++; }
-    const COLORES=['#2E8B52','#E85B4B','#5B8DD9','#F59E0B','#A78BFA','#34D399','#FB923C','#888888'];
-    const usados=S.miembros.map(m=>m.color);
-    const color=COLORES.find(c=>!usados.includes(c))||COLORES[S.miembros.length%COLORES.length];
-    S.miembros.push({id, nombre:nombre.trim(), color});
-    render(); scheduleSave(); return;
-  }
+  if(act==='invite-miembro') { openInviteSheet(); return; }
   if(act==='del-miembro') {
-    const id=btn.dataset.id;
-    if(S.miembros.length<=1) return;
-    const m=S.miembros.find(x=>x.id===id);
-    if(!m) return;
-    if(!confirm(`¿Eliminar a ${m.nombre}?`)) return;
-    S.miembros=S.miembros.filter(x=>x.id!==id);
+    const id = btn.dataset.id;
+    if (S.miembros.length <= 1) return;
+    const m = S.miembros.find(x => x.id === id);
+    if (!m) return;
+    if (!confirm(`¿Eliminar a ${m.nombre}?`)) return;
+    // Find uid of the member to delete
+    const uid = Object.entries(authState.familia?.miembros || {})
+      .find(([, mem]) => mem.id === id)?.[0];
+    S.miembros = S.miembros.filter(x => x.id !== id);
+    if (USE_FIREBASE && familiaDocRef && uid) {
+      const upd = {};
+      upd[`miembros.${uid}`] = firebase.firestore.FieldValue.delete();
+      familiaDocRef.update(upd).catch(console.error);
+      DB.collection('users').doc(uid).update({ familiaId: null, shortId: null }).catch(console.error);
+    }
     render(); scheduleSave(); return;
   }
 },{passive:true});
@@ -1434,177 +1433,431 @@ function scheduleSave() {
 }
 
 async function saveNow() {
-  const k=mesKey(), t=getTotals();
-  const hist={...(S.historico||{}),[k]:{
-    gastosVariables:S.gastosVariables,
-    ingresos:Number(S.ingresos)||0,
-    gastosFijos:S.gastosFijos.map(g=>({...g})),
-    totalGastosFijos:t.fijos,
-    totalGastosVariables:t.vars
+  const k = mesKey(), t = getTotals();
+  const hist = { ...(S.historico || {}), [k]: {
+    gastosVariables: S.gastosVariables,
+    ingresos: Number(S.ingresos) || 0,
+    gastosFijos: S.gastosFijos.map(g => ({...g})),
+    totalGastosFijos: t.fijos,
+    totalGastosVariables: t.vars
   }};
-  S.historico=hist;
-  const payload={
-    ingresos:Number(S.ingresos)||0,
-    gastosFijos:S.gastosFijos,
-    saldoAhorro:Number(S.saldoAhorro)||0,
-    diaInicio:Number(S.diaInicio)||1,
-    diaFin:Number(S.diaFin)||0,
-    mesActual:S.mesActual,
-    mesFin:Number(S.mesFin)||0,
-    metas:S.metas,
-    miembros:S.miembros,
-    historico:hist
+  S.historico = hist;
+  const payload = {
+    ingresos: Number(S.ingresos) || 0,
+    gastosFijos: S.gastosFijos,
+    saldoAhorro: Number(S.saldoAhorro) || 0,
+    diaInicio: Number(S.diaInicio) || 1,
+    diaFin: Number(S.diaFin) || 0,
+    mesActual: S.mesActual,
+    mesFin: Number(S.mesFin) || 0,
+    metas: S.metas,
+    historico: hist
   };
-  if (USE_FIREBASE && REF) {
+  if (USE_FIREBASE && familiaRef) {
     try {
-      await REF.set({...payload, updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    } catch(e){ console.error(e); }
+      await familiaRef.set({ ...payload, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    } catch(e) { console.error(e); }
   } else {
-    lsSave(payload);
+    lsSave({ ...payload, miembros: S.miembros });
   }
-  S.synced=true;
-  if(UI.syncTimer) clearTimeout(UI.syncTimer);
-  UI.syncTimer=setTimeout(()=>{S.synced=false;},2500);
+  S.synced = true;
+  if (UI.syncTimer) clearTimeout(UI.syncTimer);
+  UI.syncTimer = setTimeout(() => { S.synced = false; }, 2500);
 }
 
 
 // ══════════════════════════════════════════════
-// AUTH — LOGIN CON PIN
+// AUTH — EMAIL + PASSWORD + MULTI-FAMILIA
 // ══════════════════════════════════════════════
-// Los usuarios de la pareja se configuran aquí.
-// Email ficticio: {id}@hogar.app  — el PIN es su contraseña de 4 dígitos.
-const FAMILY_USERS = [
-  { id:'M', nombre:'María', color:'#2E8B52', email:'maria@hogar.app' },
-  { id:'G', nombre:'Gordo', color:'#E85B4B', email:'gordo@hogar.app' }
-];
+const MEMBER_COLORS = ['#2E8B52','#E85B4B','#5B8DD9','#F59E0B','#A78BFA','#34D399','#FB923C','#888888'];
 
 const authState = {
-  currentUser: null,   // { id, nombre, color, email }
-  selectedUser: null,  // usuario seleccionado en pantalla de login
-  pin: '',             // PIN que se está escribiendo
-  isSetup: false       // true = primera vez, registrar; false = login
+  currentUser: null,   // { uid, id, nombre, color, email }
+  familiaId: null,     // ID del documento en /familias/
+  familia: null,       // { nombre, ownerId, miembros: {[uid]: {id,nombre,color,role}} }
+  inviteToken: null    // token de ?invite=TOKEN en la URL
 };
 
-function renderUserCards() {
-  const c = document.getElementById('userCards');
-  if (!c) return;
-  c.innerHTML = FAMILY_USERS.map(u => `
-    <div class="user-card ${authState.selectedUser?.id === u.id ? 'selected' : ''}"
-         data-auth-user="${u.id}">
-      <div class="user-card-avatar" style="background:${u.color}">${u.id}</div>
-      <div class="user-card-name">${u.nombre}</div>
-    </div>
+// Capturar token de invitación de la URL o localStorage
+(function captureInviteToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('invite');
+  if (token) {
+    authState.inviteToken = token;
+    localStorage.setItem('hogar_pending_invite', token);
+    // Limpiar URL sin recargar
+    const clean = window.location.pathname;
+    window.history.replaceState({}, '', clean);
+  } else {
+    const stored = localStorage.getItem('hogar_pending_invite');
+    if (stored) authState.inviteToken = stored;
+  }
+})();
+
+function showLoginStep(n) {
+  ['loginStep1','loginStep2','loginStep3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', i + 1 === n);
+  });
+}
+
+function setAuthError(elId, msg) {
+  const el = document.getElementById(elId);
+  if (el) el.textContent = msg;
+}
+
+function generateShortId(nombre, existingIds) {
+  const base = (nombre.trim().charAt(0) || 'U').toUpperCase();
+  if (!existingIds.includes(base)) return base;
+  for (let i = 2; i <= 9; i++) {
+    if (!existingIds.includes(base + i)) return base + i;
+  }
+  return base + Math.floor(Math.random() * 90 + 10);
+}
+
+async function loadInviteInfo(token) {
+  if (!USE_FIREBASE || !DB || !token) return null;
+  try {
+    const snap = await DB.collection('invitaciones').doc(token).get();
+    if (!snap.exists) return null;
+    const data = snap.data();
+    if (data.status !== 'pending') return null;
+    if (data.expiresAt?.toDate && data.expiresAt.toDate() < new Date()) return null;
+    return data;
+  } catch(e) { return null; }
+}
+
+function renderColorPicker(selectedColor) {
+  const el = document.getElementById('regColorPicker');
+  if (!el) return;
+  el.innerHTML = MEMBER_COLORS.map((c, i) => `
+    <div class="color-swatch ${c === selectedColor ? 'selected' : ''}"
+         style="background:${c}" data-color="${c}"></div>
   `).join('');
 }
 
-function showLoginStep(n) {
-  document.getElementById('loginStep1').classList.toggle('active', n === 1);
-  document.getElementById('loginStep2').classList.toggle('active', n === 2);
-}
+function initAuth() {
+  let selectedColor = MEMBER_COLORS[0];
+  renderColorPicker(selectedColor);
 
-function updatePinDots() {
-  for (let i = 0; i < 4; i++) {
-    document.getElementById('pd' + i)?.classList.toggle('filled', i < authState.pin.length);
-  }
-}
+  // Color picker delegation
+  document.getElementById('regColorPicker')?.addEventListener('click', e => {
+    const sw = e.target.closest('[data-color]');
+    if (!sw) return;
+    selectedColor = sw.dataset.color;
+    document.querySelectorAll('#regColorPicker .color-swatch').forEach(s => s.classList.remove('selected'));
+    sw.classList.add('selected');
+  });
 
-function clearPinError() {
-  const e = document.getElementById('pinError');
-  if (e) e.textContent = '';
-}
-
-function setPinError(msg) {
-  const e = document.getElementById('pinError');
-  if (e) e.textContent = msg;
-  // Shake animation
-  const dots = document.querySelector('.pin-dots');
-  if (dots) { dots.style.animation='shake .4s ease'; setTimeout(()=>{ dots.style.animation=''; },400); }
-}
-
-// Seleccionar usuario en paso 1
-document.addEventListener('click', e => {
-  const card = e.target.closest('[data-auth-user]');
-  if (!card) return;
-  const uid = card.getAttribute('data-auth-user');
-  authState.selectedUser = FAMILY_USERS.find(u => u.id === uid);
-  authState.pin = '';
-  renderUserCards();
-  // Check if user exists (detect setup mode)
-  checkUserExists(authState.selectedUser);
-}, { passive: true });
-
-async function checkUserExists(user) {
-  // La app siempre muestra la pantalla de PIN. submitPin decide si hacer login o registro.
-  authState.isSetup = false;
-  const label = document.getElementById('pinLabel');
-  const note  = document.getElementById('pinSetupNote');
-  if (label) label.textContent = 'Introduce tu PIN';
-  if (note)  note.style.display = 'none';
-  clearPinError();
-  updatePinDots();
-  showLoginStep(2);
-}
-
-// PIN pad input
-document.addEventListener('click', e => {
-  const key = e.target.closest('[data-pin]');
-  if (!key) return;
-  const val = key.getAttribute('data-pin');
-
-  if (val === 'back') {
-    authState.pin = authState.pin.slice(0, -1);
-    updatePinDots();
-    clearPinError();
-    return;
+  // Mostrar banner de invitación si hay token pendiente
+  if (authState.inviteToken && USE_FIREBASE) {
+    loadInviteInfo(authState.inviteToken).then(inv => {
+      if (!inv) return;
+      const banner = document.getElementById('inviteBanner');
+      const title  = document.getElementById('inviteBannerTitle');
+      if (banner) banner.style.display = 'block';
+      if (title)  title.textContent = `Te invitan a "${inv.familiaNombre || 'una familia'}"`;
+    });
   }
 
-  if (authState.pin.length >= 4) return;
-  authState.pin += val;
-  updatePinDots();
+  // Botones
+  document.getElementById('btnLogin')?.addEventListener('click', handleLogin);
+  document.getElementById('btnRegister')?.addEventListener('click', () => handleRegister(selectedColor));
+  document.getElementById('btnGoRegister')?.addEventListener('click', () => { setAuthError('loginError',''); showLoginStep(2); });
+  document.getElementById('btnGoLogin')?.addEventListener('click',    () => { setAuthError('regError','');   showLoginStep(1); });
+  document.getElementById('btnForgotPassword')?.addEventListener('click', handleForgotPassword);
+  document.getElementById('loginPassword')?.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+  document.getElementById('regPassword')?.addEventListener('keydown',   e => { if (e.key === 'Enter') handleRegister(selectedColor); });
 
-  if (authState.pin.length === 4) {
-    setTimeout(submitPin, 150);
+  if (!USE_FIREBASE || !AUTH) {
+    S.loading = false; hideLoading(); startRealtime(); return;
   }
-}, { passive: true });
 
-function submitPin() {
-  const user = authState.selectedUser;
-  if (!user) return;
-
-  const pinLabel = document.getElementById('pinLabel');
-  if (pinLabel) pinLabel.textContent = 'Verificando...';
-
-  // PIN verificado en localStorage. Firebase Auth anónima gestiona el acceso a Firestore.
-  const stored = localStorage.getItem('pin_' + user.id);
-  if (!stored) {
-    localStorage.setItem('pin_' + user.id, authState.pin);
-    loginSuccess(user);
-  } else if (stored === authState.pin) {
-    loginSuccess(user);
-  } else {
-    authState.pin = '';
-    updatePinDots();
-    setPinError('PIN incorrecto, inténtalo de nuevo');
-    if (pinLabel) pinLabel.textContent = 'Introduce tu PIN';
-  }
-}
-
-function loginSuccess(user) {
-  authState.currentUser = user;
-  localStorage.setItem('hogar_last_user', user.id);
-  hideLoginScreen();
-  // Si ya hay sesión anónima activa, arrancar directamente; si no, esperar.
-  if (USE_FIREBASE && AUTH) {
-    if (AUTH.currentUser) {
-      startRealtime();
+  AUTH.onAuthStateChanged(async fbUser => {
+    if (authState.currentUser) return;
+    if (fbUser) {
+      await resumeSession(fbUser);
     } else {
-      const unsub = AUTH.onAuthStateChanged(fbUser => {
-        if (fbUser) { unsub(); startRealtime(); }
-      });
+      S.loading = false;
+      hideLoading();
+      showLoginScreen();
     }
-  } else {
-    startRealtime();
+  });
+}
+
+async function handleLogin() {
+  const email = document.getElementById('loginEmail')?.value.trim();
+  const pass  = document.getElementById('loginPassword')?.value;
+  setAuthError('loginError', '');
+  if (!email || !pass) { setAuthError('loginError', 'Rellena el email y la contraseña'); return; }
+  const btn = document.getElementById('btnLogin');
+  if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+  try {
+    await AUTH.signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged maneja el resto
+  } catch(e) {
+    const msg = ['auth/user-not-found','auth/wrong-password','auth/invalid-credential'].includes(e.code)
+      ? 'Email o contraseña incorrectos'
+      : e.code === 'auth/too-many-requests' ? 'Demasiados intentos, espera un momento'
+      : 'Error al entrar, inténtalo de nuevo';
+    setAuthError('loginError', msg);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
   }
+}
+
+async function handleRegister(color) {
+  const nombre = document.getElementById('regNombre')?.value.trim();
+  const email  = document.getElementById('regEmail')?.value.trim();
+  const pass   = document.getElementById('regPassword')?.value;
+  setAuthError('regError', '');
+  if (!nombre) { setAuthError('regError', 'Escribe tu nombre'); return; }
+  if (!email)  { setAuthError('regError', 'Escribe tu email'); return; }
+  if (!pass || pass.length < 6) { setAuthError('regError', 'La contraseña debe tener al menos 6 caracteres'); return; }
+  const btn = document.getElementById('btnRegister');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creando cuenta...'; }
+  try {
+    const cred = await AUTH.createUserWithEmailAndPassword(email, pass);
+    await DB.collection('users').doc(cred.user.uid).set({
+      email, nombre, color, familiaId: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // onAuthStateChanged maneja el resto
+  } catch(e) {
+    const msg = e.code === 'auth/email-already-in-use' ? 'Este email ya está registrado'
+      : e.code === 'auth/invalid-email'  ? 'Email no válido'
+      : e.code === 'auth/weak-password'  ? 'Contraseña demasiado débil'
+      : 'Error al crear la cuenta, inténtalo de nuevo';
+    setAuthError('regError', msg);
+    if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta'; }
+  }
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('loginEmail')?.value.trim();
+  if (!email) { setAuthError('loginError', 'Escribe tu email primero'); return; }
+  try {
+    await AUTH.sendPasswordResetEmail(email);
+    setAuthError('loginError', '');
+    alert('Te hemos enviado un email para recuperar la contraseña');
+  } catch(e) { setAuthError('loginError', 'No encontramos ese email'); }
+}
+
+async function resumeSession(fbUser) {
+  try {
+    const userSnap = await DB.collection('users').doc(fbUser.uid).get();
+    if (!userSnap.exists) {
+      S.loading = false; hideLoading();
+      showFamilySetup(fbUser.uid, fbUser.email?.split('@')[0] || 'Usuario', MEMBER_COLORS[0]);
+      return;
+    }
+    const profile = userSnap.data();
+    authState.currentUser = {
+      uid:    fbUser.uid,
+      email:  profile.email || fbUser.email,
+      nombre: profile.nombre,
+      color:  profile.color || MEMBER_COLORS[0],
+      id:     profile.shortId || profile.nombre.charAt(0).toUpperCase()
+    };
+    S.loading = false; hideLoading();
+    if (profile.familiaId) {
+      await loadFamiliaAndStart(profile.familiaId, fbUser.uid);
+    } else if (authState.inviteToken) {
+      await acceptPendingInvite(fbUser.uid, profile);
+    } else {
+      showFamilySetup(fbUser.uid, profile.nombre, profile.color);
+    }
+  } catch(e) {
+    console.error('Error en resumeSession:', e);
+    S.loading = false; hideLoading(); startRealtime();
+  }
+}
+
+async function loadFamiliaAndStart(familiaId, uid) {
+  try {
+    const famSnap = await DB.collection('familias').doc(familiaId).get();
+    if (!famSnap.exists) {
+      await DB.collection('users').doc(uid).update({ familiaId: null });
+      authState.familiaId = null;
+      showFamilySetup(uid, authState.currentUser.nombre, authState.currentUser.color);
+      return;
+    }
+    const famData = famSnap.data();
+    authState.familia   = famData;
+    authState.familiaId = familiaId;
+    const miembro = famData.miembros?.[uid];
+    if (miembro) {
+      authState.currentUser.id    = miembro.id;
+      authState.currentUser.color = miembro.color;
+    }
+    S.miembros   = Object.values(famData.miembros || {}).map(m => ({ id: m.id, nombre: m.nombre, color: m.color }));
+    familiaRef    = DB.collection('familias').doc(familiaId).collection('datos').doc('actual');
+    familiaDocRef = DB.collection('familias').doc(familiaId);
+    hideLoginScreen();
+    startRealtime();
+  } catch(e) {
+    console.error('Error cargando familia:', e);
+    hideLoginScreen(); startRealtime();
+  }
+}
+
+function showFamilySetup(uid, nombre, color) {
+  const loginScreen = document.getElementById('loginScreen');
+  if (loginScreen) { loginScreen.style.display = 'flex'; loginScreen.classList.remove('fade'); }
+  showLoginStep(3);
+  const container = document.getElementById('familySetupContent');
+  if (!container) return;
+
+  if (authState.inviteToken) {
+    container.innerHTML = `
+      <div class="login-sub" style="margin-bottom:24px">Tienes una invitación</div>
+      <div class="login-form">
+        <div style="font-size:13px;color:var(--t500);text-align:center;margin-bottom:20px" id="inviteInfo">Cargando...</div>
+        <div class="login-error" id="famError"></div>
+        <button class="login-btn" id="btnAceptarInvite">Unirse a la familia</button>
+        <button class="login-link-btn muted" id="btnRechazarInvite">Crear mi propia familia</button>
+      </div>`;
+    loadInviteInfo(authState.inviteToken).then(inv => {
+      const info = document.getElementById('inviteInfo');
+      if (info) info.textContent = inv
+        ? `Te invitan a "${inv.familiaNombre || 'una familia'}"`
+        : 'Invitación no válida o caducada';
+    });
+    document.getElementById('btnAceptarInvite')?.addEventListener('click', () => acceptPendingInvite(uid, { nombre, color }));
+    document.getElementById('btnRechazarInvite')?.addEventListener('click', () => {
+      authState.inviteToken = null;
+      localStorage.removeItem('hogar_pending_invite');
+      showFamilySetup(uid, nombre, color);
+    });
+  } else {
+    container.innerHTML = `
+      <div class="login-sub" style="margin-bottom:24px">Crea tu familia</div>
+      <div class="login-form">
+        <div style="font-size:13px;color:var(--t500);text-align:center;margin-bottom:14px;line-height:1.5">
+          Ponle un nombre. Después podrás invitar a quien quieras.
+        </div>
+        <input class="login-input" type="text" id="famNombre" placeholder="Ej: Los García" />
+        <div class="login-error" id="famError"></div>
+        <button class="login-btn" id="btnCrearFamilia">Crear mi familia</button>
+      </div>`;
+    document.getElementById('btnCrearFamilia')?.addEventListener('click', () => crearFamilia(uid, nombre, color));
+    document.getElementById('famNombre')?.addEventListener('keydown', e => { if (e.key === 'Enter') crearFamilia(uid, nombre, color); });
+  }
+}
+
+async function crearFamilia(uid, nombre, color) {
+  const famNombre = (document.getElementById('famNombre')?.value.trim()) || 'Mi Familia';
+  const btn = document.getElementById('btnCrearFamilia');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
+  try {
+    const shortId  = generateShortId(nombre, []);
+    const famRef   = DB.collection('familias').doc();
+    const miembro  = { id: shortId, nombre, color, role: 'admin' };
+    await famRef.set({
+      nombre: famNombre, ownerId: uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      miembros: { [uid]: miembro }
+    });
+    await DB.collection('users').doc(uid).update({ familiaId: famRef.id, shortId });
+    authState.currentUser.id    = shortId;
+    authState.familiaId         = famRef.id;
+    authState.familia           = { nombre: famNombre, ownerId: uid, miembros: { [uid]: miembro } };
+    S.miembros                  = [{ id: shortId, nombre, color }];
+    familiaRef    = DB.collection('familias').doc(famRef.id).collection('datos').doc('actual');
+    familiaDocRef = DB.collection('familias').doc(famRef.id);
+    hideLoginScreen();
+    startRealtime();
+  } catch(e) {
+    console.error(e);
+    setAuthError('famError', 'Error al crear la familia, inténtalo de nuevo');
+    if (btn) { btn.disabled = false; btn.textContent = 'Crear mi familia'; }
+  }
+}
+
+async function acceptPendingInvite(uid, profile) {
+  const token = authState.inviteToken;
+  if (!token) return;
+  try {
+    const inv = await loadInviteInfo(token);
+    if (!inv) {
+      authState.inviteToken = null;
+      localStorage.removeItem('hogar_pending_invite');
+      showFamilySetup(uid, profile.nombre, profile.color);
+      return;
+    }
+    const famSnap = await DB.collection('familias').doc(inv.familiaId).get();
+    if (!famSnap.exists) throw new Error('Familia no encontrada');
+    const famData     = famSnap.data();
+    const existingIds = Object.values(famData.miembros || {}).map(m => m.id);
+    const shortId     = generateShortId(profile.nombre, existingIds);
+    const miembro     = { id: shortId, nombre: profile.nombre, color: profile.color || MEMBER_COLORS[0], role: 'member' };
+    const upd = {}; upd[`miembros.${uid}`] = miembro;
+    await DB.collection('familias').doc(inv.familiaId).update(upd);
+    await DB.collection('users').doc(uid).update({ familiaId: inv.familiaId, shortId });
+    await DB.collection('invitaciones').doc(token).update({ status: 'accepted', acceptedBy: uid });
+    authState.inviteToken = null;
+    localStorage.removeItem('hogar_pending_invite');
+    authState.currentUser.id    = shortId;
+    authState.familiaId         = inv.familiaId;
+    authState.familia           = { ...famData, miembros: { ...famData.miembros, [uid]: miembro } };
+    S.miembros                  = Object.values(authState.familia.miembros).map(m => ({ id: m.id, nombre: m.nombre, color: m.color }));
+    familiaRef    = DB.collection('familias').doc(inv.familiaId).collection('datos').doc('actual');
+    familiaDocRef = DB.collection('familias').doc(inv.familiaId);
+    hideLoginScreen();
+    startRealtime();
+  } catch(e) {
+    console.error(e);
+    setAuthError('famError', 'Error al unirse a la familia');
+  }
+}
+
+function generateInviteToken() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let t = '';
+  for (let i = 0; i < 24; i++) t += chars[Math.floor(Math.random() * chars.length)];
+  return t;
+}
+
+async function crearInvitacion() {
+  if (!USE_FIREBASE || !DB || !authState.familiaId) return null;
+  const token     = generateInviteToken();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await DB.collection('invitaciones').doc(token).set({
+    familiaId:          authState.familiaId,
+    familiaNombre:      authState.familia?.nombre || '',
+    invitadoPor:        authState.currentUser?.uid,
+    invitadoPorNombre:  authState.currentUser?.nombre,
+    createdAt:          firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt,
+    status: 'pending'
+  });
+  return token;
+}
+
+async function openInviteSheet() {
+  const overlay  = document.getElementById('inviteOverlay');
+  const linkBox  = document.getElementById('inviteLinkBox');
+  const feedback = document.getElementById('inviteCopyFeedback');
+  if (!overlay || !linkBox) return;
+  if (feedback) feedback.textContent = '';
+  overlay.classList.add('open');
+  if (!USE_FIREBASE) { linkBox.textContent = 'Las invitaciones requieren conexión a Internet'; return; }
+  linkBox.textContent = 'Generando enlace...';
+  try {
+    const token = await crearInvitacion();
+    const url   = `${window.location.origin}${window.location.pathname}?invite=${token}`;
+    linkBox.textContent = url;
+    document.getElementById('btnCopyInvite')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch(e) {
+        const inp = document.createElement('input');
+        inp.value = url; document.body.appendChild(inp); inp.select();
+        document.execCommand('copy'); document.body.removeChild(inp);
+      }
+      if (feedback) { feedback.textContent = '¡Enlace copiado!'; setTimeout(() => { feedback.textContent = ''; }, 2500); }
+    }, { once: true });
+  } catch(e) { linkBox.textContent = 'Error al generar el enlace. Inténtalo de nuevo.'; }
 }
 
 function hideLoginScreen() {
@@ -1613,33 +1866,20 @@ function hideLoginScreen() {
 }
 
 function showLoginScreen() {
-  authState.pin = '';
-  authState.selectedUser = null;
-  authState.isSetup = false;
   const ls = document.getElementById('loginScreen');
   if (ls) { ls.style.display = 'flex'; ls.classList.remove('fade'); }
   showLoginStep(1);
-  renderUserCards();
-  updatePinDots();
 }
 
-function logout() {
+async function logout() {
   authState.currentUser = null;
-  localStorage.removeItem('hogar_last_user');
+  authState.familiaId   = null;
+  authState.familia     = null;
+  familiaRef            = null;
+  familiaDocRef         = null;
+  if (AUTH) await AUTH.signOut().catch(() => {});
   showLoginScreen();
-  // Sesión anónima de Firebase se mantiene activa para que Firestore siga funcionando.
 }
-
-function initAuth() {
-  showLoginScreen();
-  // La sesión anónima de Firebase se mantiene activa para Firestore.
-  // El PIN es la puerta de entrada a la UI, gestionado por localStorage.
-}
-
-// Shake keyframe (inject once)
-const shakeStyle = document.createElement('style');
-shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}';
-document.head.appendChild(shakeStyle);
 
 // ══════════════════════════════════════════════
 // REALTIME LISTENER
@@ -1660,26 +1900,40 @@ function applyData(d) {
 }
 
 function startRealtime() {
-  // Cargar localStorage siempre (como cache inicial)
   const cached = lsLoad();
   if (cached) { applyData(cached); }
 
-  if (USE_FIREBASE && REF) {
-    REF.onSnapshot(snap=>{
+  if (USE_FIREBASE && familiaRef) {
+    familiaRef.onSnapshot(snap => {
       try {
-        if(!snap.exists){ S.loading=false; hideLoading(); return; }
-        if(UI.editingField){ S.loading=false; hideLoading(); return; }
-        UI.applyingRemote=true;
-        applyData(snap.data()||{});
-        S.loading=false;
-        if(typeof loadTimeout!=='undefined') clearTimeout(loadTimeout);
-        setTimeout(()=>{UI.applyingRemote=false;},0);
+        if (!snap.exists) { S.loading = false; hideLoading(); render(); return; }
+        if (UI.editingField) { S.loading = false; hideLoading(); return; }
+        UI.applyingRemote = true;
+        applyData(snap.data() || {});
+        S.loading = false;
+        if (typeof loadTimeout !== 'undefined') clearTimeout(loadTimeout);
+        setTimeout(() => { UI.applyingRemote = false; }, 0);
         hideLoading(); render();
-      } catch(err){ console.error(err); hideLoading(); render(); }
-    }, err=>{console.error(err); S.loading=false; hideLoading(); render();});
+      } catch(err) { console.error(err); hideLoading(); render(); }
+    }, err => { console.error(err); S.loading = false; hideLoading(); render(); });
+
+    // Escuchar cambios en los miembros de la familia
+    if (familiaDocRef) {
+      familiaDocRef.onSnapshot(snap => {
+        if (!snap.exists) return;
+        const famData = snap.data();
+        authState.familia = famData;
+        const uid = authState.currentUser?.uid;
+        if (uid && famData.miembros?.[uid]) {
+          authState.currentUser.id    = famData.miembros[uid].id;
+          authState.currentUser.color = famData.miembros[uid].color;
+        }
+        S.miembros = Object.values(famData.miembros || {}).map(m => ({ id: m.id, nombre: m.nombre, color: m.color }));
+        if (!S.loading) render();
+      });
+    }
   } else {
-    // Sin Firebase: usar solo localStorage
-    S.loading=false;
+    S.loading = false;
     hideLoading();
     render();
   }
@@ -1713,8 +1967,38 @@ const loadTimeout = setTimeout(()=>{
   if(S.loading){ S.loading=false; hideLoading(); render(); }
 }, 8000);
 
-// Arrancar: solo auth. startRealtime() se llama desde loginSuccess() tras autenticar.
+// Arrancar: initAuth gestiona todo el flujo de autenticación.
 initAuth();
+</script>
+
+<!-- INVITE OVERLAY -->
+<div class="overlay" id="inviteOverlay">
+  <div class="sheet" id="inviteSheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">Invitar a alguien</span>
+      <button class="btn btn-cream btn-xs" id="closeInvite">✕</button>
+    </div>
+    <div style="padding:0 18px 18px">
+      <div style="font-size:14px;color:var(--t500);margin-bottom:16px;line-height:1.5">
+        Comparte este enlace. La persona podrá unirse a tu familia al abrirlo. Caduca en 7 días.
+      </div>
+      <div id="inviteLinkBox" style="background:var(--cream);border-radius:12px;padding:12px 14px;font-size:12px;font-family:monospace;word-break:break-all;margin-bottom:12px;color:var(--t700);min-height:44px">
+        Generando...
+      </div>
+      <button class="btn btn-green btn-w100" id="btnCopyInvite">Copiar enlace</button>
+      <div style="font-size:12px;color:var(--g600);font-weight:600;text-align:center;margin-top:8px;min-height:18px" id="inviteCopyFeedback"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('closeInvite')?.addEventListener('click', () => {
+    document.getElementById('inviteOverlay')?.classList.remove('open');
+  });
+  document.getElementById('inviteOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  });
 </script>
 </body>
 </html>
