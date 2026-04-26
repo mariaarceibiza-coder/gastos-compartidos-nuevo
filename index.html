@@ -1645,10 +1645,17 @@ async function handleForgotPassword() {
 
 async function resumeSession(fbUser) {
   try {
+    // Sesión anónima del sistema antiguo → cerrar y mostrar login
+    if (!fbUser.email) {
+      await AUTH.signOut().catch(() => {});
+      S.loading = false; hideLoading();
+      showLoginScreen();
+      return;
+    }
     const userSnap = await DB.collection('users').doc(fbUser.uid).get();
     if (!userSnap.exists) {
       S.loading = false; hideLoading();
-      showFamilySetup(fbUser.uid, fbUser.email?.split('@')[0] || 'Usuario', MEMBER_COLORS[0]);
+      showFamilySetup(fbUser.uid, fbUser.email.split('@')[0] || 'Usuario', MEMBER_COLORS[0]);
       return;
     }
     const profile = userSnap.data();
@@ -1669,7 +1676,8 @@ async function resumeSession(fbUser) {
     }
   } catch(e) {
     console.error('Error en resumeSession:', e);
-    S.loading = false; hideLoading(); startRealtime();
+    S.loading = false; hideLoading();
+    showLoginScreen();
   }
 }
 
@@ -1962,9 +1970,12 @@ window.addEventListener('unhandledrejection', e=>{
   hideLoading();
 });
 
-// Fallback: si Firebase no responde en 8s, mostramos la app
+// Fallback: si Firebase no responde en 8s
 const loadTimeout = setTimeout(()=>{
-  if(S.loading){ S.loading=false; hideLoading(); render(); }
+  if(S.loading){
+    S.loading=false; hideLoading();
+    if (!authState.currentUser) showLoginScreen(); else render();
+  }
 }, 8000);
 
 // Arrancar: initAuth gestiona todo el flujo de autenticación.
