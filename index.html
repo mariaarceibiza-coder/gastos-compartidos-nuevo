@@ -2754,22 +2754,17 @@ async function handleForgotPassword() {
 }
 
 async function resumeSession(fbUser) {
-  // Ocultar la carga inmediatamente al conocer el estado de auth,
-  // mostrando datos en caché mientras se completan los reads de Firestore.
-  const cached = lsLoad();
-  if (cached) applyData(cached);
-  S.loading = false;
-  hideLoading();
-
   try {
     // Sesión anónima del sistema antiguo → cerrar y mostrar login
     if (!fbUser.email) {
       await AUTH.signOut().catch(() => {});
+      S.loading = false; hideLoading();
       showLoginScreen();
       return;
     }
     const userSnap = await DB.collection('users').doc(fbUser.uid).get();
     if (!userSnap.exists) {
+      S.loading = false; hideLoading();
       showFamilySetup(fbUser.uid, fbUser.email.split('@')[0] || 'Usuario', MEMBER_COLORS[0]);
       return;
     }
@@ -2781,6 +2776,7 @@ async function resumeSession(fbUser) {
       color:  profile.color || MEMBER_COLORS[0],
       id:     profile.shortId || profile.nombre.charAt(0).toUpperCase()
     };
+    S.loading = false; hideLoading();
     if (profile.familiaId) {
       await loadFamiliaAndStart(profile.familiaId, fbUser.uid);
     } else if (authState.inviteToken) {
@@ -2790,6 +2786,7 @@ async function resumeSession(fbUser) {
     }
   } catch(e) {
     console.error('Error en resumeSession:', e);
+    S.loading = false; hideLoading();
     showLoginScreen();
   }
 }
@@ -3025,7 +3022,7 @@ function applyData(d) {
 
 function startRealtime() {
   const cached = lsLoad();
-  if (cached) { applyData(cached); render(); }
+  if (cached) { applyData(cached); }
 
   if (USE_FIREBASE && familiaRef) {
     familiaRef.onSnapshot(snap => {
