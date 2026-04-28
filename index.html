@@ -533,6 +533,11 @@ const CATS = [
   {id:'otros', icon:'✨', label:'Otros'}
 ];
 
+const ICONOS_FIJOS = [
+  '🏠','💡','💧','🔥','📱','🌐','🚗','🅿️',
+  '🏫','💳','🏋️','🐾','🎵','🏥','🎓','✨'
+];
+
 const CAT_COLORS = ['#246B3E','#B8F04A','#E85B4B','#F59E0B','#5B8DD9','#A78BFA','#34D399','#FB923C'];
 
 const MIEMBROS_DEFAULT = [
@@ -1368,6 +1373,23 @@ function renderAnalisis() {
           </div>`).join('')}
       </div>`:''}
 
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Gastos fijos del mes</div>
+      ${S.gastosFijos.length===0?`<div class="empty">Sin gastos fijos</div>`:`
+        ${S.gastosFijos.map(g=>`
+          <div class="bk-item">
+            <div class="bk-ico">${g.icono||'💳'}</div>
+            <div class="bk-info">
+              <div class="flex-bc">
+                <span class="bk-name" style="${g.pagado?'text-decoration:line-through;color:var(--t300)':''}">${escH(g.categoria)}</span>
+                <span style="font-size:13px;font-weight:700">${fmt(g.presupuesto)} €</span>
+              </div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:${g.pagado?'var(--g600)':'var(--amber)'}">${g.pagado?'✓ pagado':'pendiente'}</div>
+          </div>`).join('')}
+      `}
+    </div>
+
     <div class="card-dark" style="margin-bottom:16px">
       <div class="card-content">
         <div class="overline-w mb-4">AHORRO DISPONIBLE</div>
@@ -1781,13 +1803,12 @@ function renderGastos() {
       ${S.gastosFijos.map(g=>`
         <div class="fijo-item ${g.pagado?'paid':''}">
           <div class="check-ring ${g.pagado?'on':''}" data-action="toggle-pagado" data-id="${g.id}">${g.pagado?'✓':''}</div>
-          <input type="text" value="${escH(g.categoria)}"
-                 data-field="fijo-cat" data-id="${g.id}"
-                 style="flex:1;min-width:0;font-size:14px;font-weight:600;border:none;background:transparent;outline:none;font-family:var(--font-b);${g.pagado?'text-decoration:line-through;color:var(--t300)':'color:var(--t900)'}" />
-          <input type="number" step="0.01" value="${g.presupuesto}"
-                 data-field="fijo-pres" data-id="${g.id}"
-                 style="width:72px;font-size:13px;font-weight:700;border:none;background:transparent;outline:none;text-align:right;font-family:var(--font-b);${g.pagado?'color:var(--g600)':'color:var(--t900)'}" />
-          <span style="font-size:13px;color:var(--t500);margin-left:2px">€</span>
+          <div style="background:var(--cream);border-radius:10px;width:36px;height:36px;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center">${g.icono||'💳'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:600;${g.pagado?'text-decoration:line-through;color:var(--t300)':'color:var(--t900)'}">${escH(g.categoria)}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;${g.pagado?'color:var(--g600)':'color:var(--t900)'}">${fmt(g.presupuesto)} €</div>
+          <button class="btn" style="background:transparent;padding:4px 6px;font-size:15px;color:var(--t300)" data-action="edit-fijo" data-id="${g.id}">✏️</button>
           <button class="btn" style="background:transparent;padding:4px 6px;font-size:15px;color:var(--t300)" data-action="del-fijo" data-id="${g.id}">🗑</button>
         </div>`).join('')}
       <button class="btn btn-cream btn-w100" style="border-radius:14px;margin-top:4px;margin-bottom:8px" data-action="add-fijo">+ Añadir fijo</button>
@@ -2107,6 +2128,53 @@ document.getElementById('delEditMetaBtn').addEventListener('click', ()=>{
 });
 
 // ══════════════════════════════════════════════
+// EDITAR GASTO FIJO
+// ══════════════════════════════════════════════
+let _editFijoId = null;
+let _editFijoIcono = ICONOS_FIJOS[0];
+
+function openEditFijo(id) {
+  _editFijoId = id;
+  const g = S.gastosFijos.find(x => x.id === id);
+  _editFijoIcono = g?.icono || '💳';
+  const grid = document.getElementById('fijoIconoGrid');
+  grid.innerHTML = ICONOS_FIJOS.map(e =>
+    `<button class="emoji-btn${e===_editFijoIcono?' selected':''}" data-fijo-icono="${e}">${e}</button>`
+  ).join('');
+  document.getElementById('inFijoNombre').value = g?.categoria || '';
+  document.getElementById('inFijoPresupuesto').value = g?.presupuesto || '';
+  document.getElementById('inFijoNombre').style.borderColor = '';
+  document.getElementById('editFijoOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEditFijo() {
+  document.getElementById('editFijoOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _editFijoId = null;
+}
+document.getElementById('closeEditFijo').addEventListener('click', closeEditFijo);
+document.getElementById('editFijoOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeEditFijo();
+});
+document.getElementById('fijoIconoGrid').addEventListener('click', e => {
+  const btn = e.target.closest('[data-fijo-icono]');
+  if (!btn) return;
+  _editFijoIcono = btn.dataset.fijoIcono;
+  document.getElementById('fijoIconoGrid').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b === btn));
+});
+document.getElementById('saveEditFijoBtn').addEventListener('click', () => {
+  const nombre = document.getElementById('inFijoNombre').value.trim();
+  if (!nombre) { document.getElementById('inFijoNombre').style.borderColor = 'var(--coral)'; return; }
+  const presupuesto = Number(document.getElementById('inFijoPresupuesto').value || 0);
+  S.gastosFijos = S.gastosFijos.map(x =>
+    x.id === _editFijoId ? {...x, icono: _editFijoIcono, categoria: nombre, presupuesto} : x
+  );
+  closeEditFijo();
+  render();
+  scheduleSave();
+});
+
+// ══════════════════════════════════════════════
 // EVENT DELEGATION
 // ══════════════════════════════════════════════
 document.addEventListener('click', e=>{
@@ -2156,6 +2224,9 @@ document.addEventListener('click', e=>{
     S.gastosVariables=S.gastosVariables.filter(x=>x.id!==id);
     render(); scheduleSave(); return;
   }
+  if(act==='edit-fijo') {
+    openEditFijo(Number(btn.dataset.id)); return;
+  }
   if(act==='del-fijo') {
     const id=Number(btn.dataset.id);
     S.gastosFijos=S.gastosFijos.filter(x=>x.id!==id);
@@ -2163,7 +2234,7 @@ document.addEventListener('click', e=>{
   }
   if(act==='add-fijo') {
     const newId=Math.max(0,...S.gastosFijos.map(g=>g.id))+1;
-    S.gastosFijos.push({id:newId,categoria:'Nuevo gasto',presupuesto:0,pagado:false});
+    S.gastosFijos.push({id:newId,categoria:'Nuevo gasto',presupuesto:0,pagado:false,icono:'💳'});
     render(); scheduleSave(); return;
   }
   if(act==='add-meta')  { openEditMetaSheet(null); return; }
@@ -2926,6 +2997,32 @@ initAuth();
     if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
   });
 </script>
+
+<!-- EDIT FIJO OVERLAY -->
+<div class="overlay" id="editFijoOverlay">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">Editar gasto fijo</span>
+      <button class="btn btn-cream btn-xs" id="closeEditFijo">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Icono</label>
+      <div class="emoji-grid" id="fijoIconoGrid"></div>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Nombre</label>
+      <input class="form-in" type="text" placeholder="ej: Alquiler, Luz…" id="inFijoNombre" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Importe mensual (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inFijoPresupuesto" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec" style="margin-top:4px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveEditFijoBtn">Guardar →</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD PAGO APLAZADO OVERLAY -->
 <div class="overlay" id="addPagoAplazadoOverlay">
