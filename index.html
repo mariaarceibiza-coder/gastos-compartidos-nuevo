@@ -510,11 +510,6 @@ try {
     DB = firebase.firestore();
     AUTH = firebase.auth();
     USE_FIREBASE = true;
-    DB.enablePersistence({ synchronizeTabs: true }).catch(err => {
-      if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
-        console.warn('Firestore persistence error:', err.code);
-      }
-    });
   }
 } catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
 function lsLoad() { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null; } catch(e){return null;} }
