@@ -590,7 +590,9 @@ const UI = {
   addContext: 'familiar',
   personalSaveTimer: null,
   editandoGastoId: null,
-  editandoPagoId: null
+  editandoPagoId: null,
+  editandoPendienteCobroId: null,
+  cobroParcialParaId: null
 };
 
 // ── ESTADO PERSONAL (privado por usuario) ──
@@ -600,6 +602,7 @@ const SP = {
   ahorroPersonal: 0,
   pagosAplazados: [],
   gastosPersonales: [],
+  pendientesCobro: [],
   historico: {}
 };
 let personalRef = null;
@@ -719,6 +722,7 @@ async function savePersonalData() {
       ahorroPersonal:  Number(SP.ahorroPersonal)  || 0,
       pagosAplazados:  SP.pagosAplazados,
       gastosPersonales: SP.gastosPersonales,
+      pendientesCobro: SP.pendientesCobro,
       historico: SP.historico || {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -738,6 +742,7 @@ async function loadPersonalData() {
       if (typeof d.ahorroPersonal  === 'number') SP.ahorroPersonal  = d.ahorroPersonal;
       if (Array.isArray(d.pagosAplazados))  SP.pagosAplazados  = d.pagosAplazados;
       if (Array.isArray(d.gastosPersonales)) SP.gastosPersonales = d.gastosPersonales;
+      if (Array.isArray(d.pendientesCobro)) SP.pendientesCobro = d.pendientesCobro;
       if (d.historico && typeof d.historico === 'object') SP.historico = d.historico;
     }
     if (UI.tab === 'yo') renderTab('yo');
@@ -1597,6 +1602,43 @@ function renderYo() {
     })
     .sort((a, b_) => new Date(b_.fecha) - new Date(a.fecha));
 
+  // Pre-compute Me lo deben HTML
+  const pendActivos  = SP.pendientesCobro.filter(p => (Number(p.importeCobrado)||0) < (Number(p.importeTotal)||0));
+  const pendSaldados = SP.pendientesCobro.filter(p => (Number(p.importeCobrado)||0) >= (Number(p.importeTotal)||0));
+  const totalPorCobrar = pendActivos.reduce((s, p) => s + Math.max(0, (Number(p.importeTotal)||0) - (Number(p.importeCobrado)||0)), 0);
+  const renderPendCard = (p, saldado) => {
+    const total    = Number(p.importeTotal) || 0;
+    const cobrado  = Number(p.importeCobrado) || 0;
+    const pendiente = Math.max(0, total - cobrado);
+    const pctCobrado = pct(cobrado, total);
+    return `<div class="card" style="margin-bottom:10px;padding:14px 16px${saldado ? ';opacity:0.48' : ''}">
+      <div class="flex-bc mb-8">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:${saldado ? 'var(--t400)' : 'var(--t900)'}">${escH(p.concepto)}</div>
+          <div style="font-size:12px;color:var(--t500);margin-top:2px">${escH(p.fecha||'')}${p.notas ? ' · ' + escH(p.notas) : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px">
+          ${!saldado ? `<button class="btn" style="background:var(--g600);color:white;border-radius:10px;padding:5px 10px;font-size:12px;font-weight:700" data-action="open-cobro-parcial" data-id="${p.id}">+ cobrar</button>` : '<span style="font-size:11px;font-weight:700;color:var(--g600)">Saldado</span>'}
+          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="edit-pendiente-cobro" data-id="${p.id}">✏️</button>
+          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-pendiente-cobro" data-id="${p.id}">🗑</button>
+        </div>
+      </div>
+      <div class="flex-bc" style="margin-bottom:6px">
+        <div style="font-size:12px;color:var(--t500)">Total: <strong>${fmt(total)} €</strong></div>
+        ${saldado
+          ? '<div style="font-size:11px;font-weight:700;color:var(--g600)">✓ Saldado</div>'
+          : `<div style="font-size:13px;font-weight:800;color:var(--coral)">${fmt(pendiente)} € pendiente</div>`
+        }
+      </div>
+      <div class="track-sm">
+        <div class="fill" style="width:${pctCobrado}%;background:${saldado ? 'var(--g600)' : 'var(--coral)'}"></div>
+      </div>
+    </div>`;
+  };
+  const meLodebenCardsHtml = SP.pendientesCobro.length === 0
+    ? '<div class="empty" style="padding:14px 0">Sin pendientes de cobro</div>'
+    : pendActivos.map(p => renderPendCard(p, false)).join('') + pendSaldados.map(p => renderPendCard(p, true)).join('');
+
   const coachBlock = personalCoachState.cargando
     ? `<div style="background:var(--white);padding:16px;border-radius:16px;display:flex;align-items:center;gap:10px">
         <div style="width:28px;height:28px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>
@@ -1712,6 +1754,21 @@ function renderYo() {
           }).join('')}
       <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:8px" data-action="open-add-pago-aplazado">
         + Añadir pago aplazado
+      </button>
+    </div>
+
+    <!-- ME LO DEBEN -->
+    <div class="sec-divider">
+      <div class="sec-title">Me lo deben</div>
+      ${totalPorCobrar > 0
+        ? `<div style="background:rgba(232,91,75,.15);color:var(--coral);border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700">${fmt(totalPorCobrar)} € por cobrar</div>`
+        : `<div style="font-size:12px;color:var(--g600);font-weight:600">Todo cobrado</div>`
+      }
+    </div>
+    <div class="p14">
+      ${meLodebenCardsHtml}
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:8px" data-action="open-add-pendiente-cobro">
+        + Añadir pendiente de cobro
       </button>
     </div>
 
@@ -2003,6 +2060,52 @@ function closeAddPagoAplazado() {
 }
 
 // ══════════════════════════════════════════════
+// ADD PENDIENTE COBRO MODAL
+// ══════════════════════════════════════════════
+function openAddPendienteCobro() {
+  const o = document.getElementById('addPendienteCobroOverlay');
+  if (!o) return;
+  o.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  ['inPendConcepto','inPendImporte','inPendFecha','inPendNotas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.style.borderColor = ''; }
+  });
+  const t = document.getElementById('addPendienteCobroModalTitle');
+  if (t) t.textContent = 'Nuevo pendiente de cobro';
+}
+function closeAddPendienteCobro() {
+  const o = document.getElementById('addPendienteCobroOverlay');
+  if (o) o.classList.remove('open');
+  document.body.style.overflow = '';
+  UI.editandoPendienteCobroId = null;
+}
+
+// ══════════════════════════════════════════════
+// COBRO PARCIAL MODAL
+// ══════════════════════════════════════════════
+function openCobroParcial(id) {
+  UI.cobroParcialParaId = id;
+  const p = SP.pendientesCobro.find(x => x.id === id);
+  if (!p) return;
+  const o = document.getElementById('cobroParcialOverlay');
+  if (!o) return;
+  const pendiente = Math.max(0, (Number(p.importeTotal)||0) - (Number(p.importeCobrado)||0));
+  const lbl = document.getElementById('cobroParcialConcepto');
+  if (lbl) lbl.textContent = escH(p.concepto) + ' — quedan ' + fmt(pendiente) + ' €';
+  const inp = document.getElementById('inCobroParcialImporte');
+  if (inp) { inp.value = ''; inp.style.borderColor = ''; }
+  o.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCobroParcial() {
+  const o = document.getElementById('cobroParcialOverlay');
+  if (o) o.classList.remove('open');
+  document.body.style.overflow = '';
+  UI.cobroParcialParaId = null;
+}
+
+// ══════════════════════════════════════════════
 // HISTORICO MODAL
 // ══════════════════════════════════════════════
 function openHistorico() {
@@ -2277,6 +2380,30 @@ document.addEventListener('click', e=>{
     const id=Number(btn.dataset.id);
     SP.pagosAplazados=SP.pagosAplazados.map(x=>x.id===id?{...x,pagado:!x.pagado}:x);
     renderTab('yo'); schedulePersonalSave(); return;
+  }
+  if(act==='open-add-pendiente-cobro') { openAddPendienteCobro(); return; }
+  if(act==='edit-pendiente-cobro') {
+    const id=Number(btn.dataset.id);
+    const p=SP.pendientesCobro.find(x=>x.id===id);
+    if(!p) return;
+    UI.editandoPendienteCobroId=id;
+    openAddPendienteCobro();
+    document.getElementById('inPendConcepto').value=p.concepto||'';
+    document.getElementById('inPendImporte').value=p.importeTotal||'';
+    document.getElementById('inPendFecha').value=p.fecha||'';
+    document.getElementById('inPendNotas').value=p.notas||'';
+    const t=document.getElementById('addPendienteCobroModalTitle');
+    if(t) t.textContent='Editar pendiente';
+    return;
+  }
+  if(act==='del-pendiente-cobro') {
+    const id=Number(btn.dataset.id);
+    SP.pendientesCobro=SP.pendientesCobro.filter(x=>x.id!==id);
+    renderTab('yo'); schedulePersonalSave(); return;
+  }
+  if(act==='open-cobro-parcial') {
+    const id=Number(btn.dataset.id);
+    openCobroParcial(id); return;
   }
   if(act==='open-add-gasto-personal') {
     UI.addContext='personal'; openAdd(); return;
@@ -3023,6 +3150,111 @@ initAuth();
     </div>
   </div>
 </div>
+
+<!-- ADD PENDIENTE COBRO OVERLAY -->
+<div class="overlay" id="addPendienteCobroOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span id="addPendienteCobroModalTitle" style="font-size:17px;font-weight:700">Nuevo pendiente de cobro</span>
+      <button class="btn btn-cream btn-xs" id="closeAddPendienteCobro">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Concepto</label>
+      <input class="form-in" type="text" placeholder="ej: Compra Ikea abril…" id="inPendConcepto" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Importe total que te deben (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inPendImporte" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Fecha</label>
+      <input class="form-in" type="date" id="inPendFecha" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Notas (opcional)</label>
+      <input class="form-in" type="text" placeholder="ej: de la cuenta familiar…" id="inPendNotas" />
+    </div>
+    <div class="form-sec" style="margin-top:4px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveAddPendienteCobroBtn">Guardar →</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  document.getElementById('closeAddPendienteCobro')?.addEventListener('click', () => closeAddPendienteCobro());
+  document.getElementById('addPendienteCobroOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddPendienteCobro();
+  });
+  document.getElementById('saveAddPendienteCobroBtn')?.addEventListener('click', () => {
+    const concepto = document.getElementById('inPendConcepto').value.trim();
+    const importe  = Number(document.getElementById('inPendImporte').value || 0);
+    if (!concepto || !importe) {
+      if (!concepto) document.getElementById('inPendConcepto').style.borderColor = 'var(--coral)';
+      if (!importe)  document.getElementById('inPendImporte').style.borderColor  = 'var(--coral)';
+      return;
+    }
+    const fecha = document.getElementById('inPendFecha').value || '';
+    const notas = document.getElementById('inPendNotas').value.trim();
+    if (UI.editandoPendienteCobroId !== null) {
+      SP.pendientesCobro = SP.pendientesCobro.map(x =>
+        x.id === UI.editandoPendienteCobroId
+          ? { ...x, concepto, importeTotal: importe, fecha, notas }
+          : x
+      );
+    } else {
+      SP.pendientesCobro.push({ id: Date.now(), concepto, importeTotal: importe, importeCobrado: 0, fecha, notas });
+    }
+    closeAddPendienteCobro();
+    renderTab('yo');
+    schedulePersonalSave();
+  });
+</script>
+
+<!-- COBRO PARCIAL OVERLAY -->
+<div class="overlay" id="cobroParcialOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">Registrar cobro</span>
+      <button class="btn btn-cream btn-xs" id="closeCobroParcial">✕</button>
+    </div>
+    <div class="form-sec">
+      <div id="cobroParcialConcepto" style="font-size:13px;color:var(--t500);padding:0 0 4px"></div>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Importe cobrado (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inCobroParcialImporte" style="font-size:24px;font-weight:700" />
+    </div>
+    <div class="form-sec" style="margin-top:4px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveCobroParcialBtn">Cobrar →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('closeCobroParcial')?.addEventListener('click', () => closeCobroParcial());
+  document.getElementById('cobroParcialOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCobroParcial();
+  });
+  document.getElementById('saveCobroParcialBtn')?.addEventListener('click', () => {
+    const importe = Number(document.getElementById('inCobroParcialImporte').value || 0);
+    if (!importe || importe <= 0) {
+      document.getElementById('inCobroParcialImporte').style.borderColor = 'var(--coral)';
+      return;
+    }
+    const id = UI.cobroParcialParaId;
+    SP.pendientesCobro = SP.pendientesCobro.map(x => {
+      if (x.id !== id) return x;
+      const nuevoCobrado = (Number(x.importeCobrado) || 0) + importe;
+      return { ...x, importeCobrado: nuevoCobrado };
+    });
+    closeCobroParcial();
+    renderTab('yo');
+    schedulePersonalSave();
+  });
+</script>
 
 <!-- ADD PAGO APLAZADO OVERLAY -->
 <div class="overlay" id="addPagoAplazadoOverlay">
