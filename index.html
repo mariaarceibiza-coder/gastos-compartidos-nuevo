@@ -407,7 +407,7 @@
   <div class="sheet" id="addSheet">
     <div class="handle"></div>
     <div class="sheet-header">
-      <span style="font-size:17px;font-weight:700">Nuevo gasto</span>
+      <span id="addModalTitle" style="font-size:17px;font-weight:700">Nuevo gasto</span>
       <button class="btn btn-cream btn-xs" id="closeAdd">✕</button>
     </div>
     <div class="form-sec">
@@ -583,7 +583,9 @@ const UI = {
   selCat: 'super',
   editMetaId: null,
   addContext: 'familiar',
-  personalSaveTimer: null
+  personalSaveTimer: null,
+  editandoGastoId: null,
+  editandoPagoId: null
 };
 
 // ── ESTADO PERSONAL (privado por usuario) ──
@@ -1674,6 +1676,7 @@ function renderYo() {
                     <div style="font-size:12px;color:var(--t500)">${fmt(p.cuotaMensual)} €/mes · ${mesesRest} meses restantes</div>
                   </div>
                 </div>
+                <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="edit-pago-aplazado" data-id="${p.id}">✏️</button>
                 <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-pago-aplazado" data-id="${p.id}">🗑</button>
               </div>
               <div class="flex-bc" style="margin-bottom:6px">
@@ -1708,6 +1711,7 @@ function renderYo() {
                 <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha || '')}</div>
               </div>
               <div class="tx-amt">${fmt(g.monto)} €</div>
+              <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="edit-gasto-personal" data-id="${g.id}">✏️</button>
               <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-gasto-personal" data-id="${g.id}">🗑</button>
             </div>`).join('')
         : '<div class="empty">Sin gastos personales este mes</div>'}
@@ -1806,6 +1810,7 @@ function renderGastos() {
             <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha||'')}</div>
           </div>
           <div class="tx-amt">${fmt(g.monto)} €</div>
+          <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="edit-variable" data-id="${g.id}">✏️</button>
           <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-variable" data-id="${g.id}">🗑</button>
         </div>`).join('') : '<div class="empty">Sin gastos variables este mes</div>'}
     </div>
@@ -1884,13 +1889,20 @@ function openAdd() {
   const o = document.getElementById('addOverlay');
   o.classList.add('open');
   document.body.style.overflow='hidden';
-  const f = document.getElementById('inFecha');
-  if(f && !f.value) f.value = new Date().toISOString().split('T')[0];
+  if (UI.editandoGastoId === null) {
+    document.getElementById('inMonto').value = '';
+    document.getElementById('inDesc').value = '';
+    document.getElementById('inFecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('inMonto').style.borderColor = '';
+  }
+  const title = document.getElementById('addModalTitle');
+  if (title) title.textContent = UI.editandoGastoId !== null ? 'Editar gasto' : 'Nuevo gasto';
   renderCatGrid();
 }
 function closeAdd() {
   document.getElementById('addOverlay').classList.remove('open');
   document.body.style.overflow='';
+  UI.editandoGastoId = null;
 }
 document.getElementById('closeAdd').addEventListener('click', closeAdd);
 document.getElementById('addOverlay').addEventListener('click', e=>{
@@ -1907,30 +1919,40 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
   if(!monto||!fecha){ document.getElementById('inMonto').style.borderColor='var(--coral)'; return; }
 
   if (UI.addContext === 'personal') {
-    SP.gastosPersonales.push({
-      id: Date.now(),
-      fecha, monto: Number(monto),
-      descripcion: desc || '',
-      categoria: UI.selCat
-    });
+    if (UI.editandoGastoId !== null) {
+      SP.gastosPersonales = SP.gastosPersonales.map(x =>
+        x.id === UI.editandoGastoId
+          ? {...x, fecha, monto: Number(monto), descripcion: desc || '', categoria: UI.selCat}
+          : x
+      );
+    } else {
+      SP.gastosPersonales.push({
+        id: Date.now(),
+        fecha, monto: Number(monto),
+        descripcion: desc || '',
+        categoria: UI.selCat
+      });
+    }
     UI.addContext = 'familiar';
-    document.getElementById('inMonto').value='';
-    document.getElementById('inDesc').value='';
-    document.getElementById('inFecha').value='';
     closeAdd();
     renderTab('yo');
     schedulePersonalSave();
   } else {
-    S.gastosVariables.push({
-      id: Date.now(),
-      fecha, monto:Number(monto),
-      descripcion: desc||'',
-      categoria: UI.selCat,
-      pagadoPor: authState.currentUser?.id || 'M'
-    });
-    document.getElementById('inMonto').value='';
-    document.getElementById('inDesc').value='';
-    document.getElementById('inFecha').value='';
+    if (UI.editandoGastoId !== null) {
+      S.gastosVariables = S.gastosVariables.map(x =>
+        x.id === UI.editandoGastoId
+          ? {...x, fecha, monto: Number(monto), descripcion: desc || '', categoria: UI.selCat}
+          : x
+      );
+    } else {
+      S.gastosVariables.push({
+        id: Date.now(),
+        fecha, monto:Number(monto),
+        descripcion: desc||'',
+        categoria: UI.selCat,
+        pagadoPor: authState.currentUser?.id || 'M'
+      });
+    }
     closeAdd();
     render();
     scheduleSave();
@@ -1954,6 +1976,9 @@ function closeAddPagoAplazado() {
   const o = document.getElementById('addPagoAplazadoOverlay');
   if (o) o.classList.remove('open');
   document.body.style.overflow = '';
+  UI.editandoPagoId = null;
+  const t = document.getElementById('addPagoAplazadoModalTitle');
+  if (t) t.textContent = 'Nuevo pago aplazado';
 }
 
 // ══════════════════════════════════════════════
@@ -2115,6 +2140,17 @@ document.addEventListener('click', e=>{
     S.gastosFijos=S.gastosFijos.map(x=>x.id===id?{...x,pagado:!x.pagado}:x);
     render(); scheduleSave(); return;
   }
+  if(act==='edit-variable') {
+    const id=Number(btn.dataset.id);
+    const g=S.gastosVariables.find(x=>x.id===id);
+    if(!g) return;
+    UI.editandoGastoId=id; UI.addContext='familiar'; UI.selCat=g.categoria;
+    openAdd();
+    document.getElementById('inMonto').value=g.monto;
+    document.getElementById('inDesc').value=g.descripcion||'';
+    document.getElementById('inFecha').value=g.fecha||'';
+    return;
+  }
   if(act==='del-variable') {
     const id=Number(btn.dataset.id);
     S.gastosVariables=S.gastosVariables.filter(x=>x.id!==id);
@@ -2147,6 +2183,20 @@ document.addEventListener('click', e=>{
     render(); return;
   }
   if(act==='open-add-pago-aplazado') { openAddPagoAplazado(); return; }
+  if(act==='edit-pago-aplazado') {
+    const id=Number(btn.dataset.id);
+    const p=SP.pagosAplazados.find(x=>x.id===id);
+    if(!p) return;
+    UI.editandoPagoId=id;
+    openAddPagoAplazado();
+    document.getElementById('inPagoNombre').value=p.nombre;
+    document.getElementById('inPagoCuota').value=p.cuotaMensual;
+    document.getElementById('inPagoCapital').value=p.capitalPendiente;
+    document.getElementById('inPagoMeses').value=p.mesesRestantes;
+    const t=document.getElementById('addPagoAplazadoModalTitle');
+    if(t) t.textContent='Editar pago aplazado';
+    return;
+  }
   if(act==='del-pago-aplazado') {
     const id=Number(btn.dataset.id);
     SP.pagosAplazados=SP.pagosAplazados.filter(x=>x.id!==id);
@@ -2159,6 +2209,17 @@ document.addEventListener('click', e=>{
   }
   if(act==='open-add-gasto-personal') {
     UI.addContext='personal'; openAdd(); return;
+  }
+  if(act==='edit-gasto-personal') {
+    const id=Number(btn.dataset.id);
+    const g=SP.gastosPersonales.find(x=>x.id===id);
+    if(!g) return;
+    UI.editandoGastoId=id; UI.addContext='personal'; UI.selCat=g.categoria;
+    openAdd();
+    document.getElementById('inMonto').value=g.monto;
+    document.getElementById('inDesc').value=g.descripcion||'';
+    document.getElementById('inFecha').value=g.fecha||'';
+    return;
   }
   if(act==='del-gasto-personal') {
     const id=Number(btn.dataset.id);
@@ -2871,7 +2932,7 @@ initAuth();
   <div class="sheet">
     <div class="handle"></div>
     <div class="sheet-header">
-      <span style="font-size:17px;font-weight:700">Nuevo pago aplazado</span>
+      <span id="addPagoAplazadoModalTitle" style="font-size:17px;font-weight:700">Nuevo pago aplazado</span>
       <button class="btn btn-cream btn-xs" id="closeAddPagoAplazado">✕</button>
     </div>
     <div class="form-sec">
@@ -2911,7 +2972,15 @@ initAuth();
     }
     const capital = Number(document.getElementById('inPagoCapital').value || 0);
     const meses   = Number(document.getElementById('inPagoMeses').value  || 0);
-    SP.pagosAplazados.push({ id: Date.now(), nombre, cuotaMensual: cuota, capitalPendiente: capital, mesesRestantes: meses, mesesOriginales: meses, pagado: false });
+    if (UI.editandoPagoId !== null) {
+      SP.pagosAplazados = SP.pagosAplazados.map(x =>
+        x.id === UI.editandoPagoId
+          ? {...x, nombre, cuotaMensual: cuota, capitalPendiente: capital, mesesRestantes: meses}
+          : x
+      );
+    } else {
+      SP.pagosAplazados.push({ id: Date.now(), nombre, cuotaMensual: cuota, capitalPendiente: capital, mesesRestantes: meses, mesesOriginales: meses, pagado: false });
+    }
     closeAddPagoAplazado();
     renderTab('yo');
     schedulePersonalSave();
