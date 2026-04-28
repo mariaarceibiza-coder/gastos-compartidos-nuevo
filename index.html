@@ -650,7 +650,7 @@ function getBudget() {
 
   // Semana
   const dow = hoy.getDay()===0 ? 6 : hoy.getDay()-1;
-  const iniSem = new Date(hoy); iniSem.setDate(hoy.getDate()-dow);
+  const iniSem = new Date(hoy); iniSem.setDate(hoy.getDate()-dow); iniSem.setHours(0, 0, 0, 0);
   const gastSem = S.gastosVariables.filter(g=>{
     if(!g.fecha) return false;
     const d=new Date(g.fecha); return d>=iniSem && d<=hoy;
