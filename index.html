@@ -510,6 +510,11 @@ try {
     DB = firebase.firestore();
     AUTH = firebase.auth();
     USE_FIREBASE = true;
+    DB.enablePersistence({ synchronizeTabs: true }).catch(err => {
+      if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
+        console.warn('Firestore persistence error:', err.code);
+      }
+    });
   }
 } catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
 function lsLoad() { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null; } catch(e){return null;} }
@@ -2754,17 +2759,22 @@ async function handleForgotPassword() {
 }
 
 async function resumeSession(fbUser) {
+  // Ocultar la carga inmediatamente al conocer el estado de auth,
+  // mostrando datos en caché mientras se completan los reads de Firestore.
+  const cached = lsLoad();
+  if (cached) applyData(cached);
+  S.loading = false;
+  hideLoading();
+
   try {
     // Sesión anónima del sistema antiguo → cerrar y mostrar login
     if (!fbUser.email) {
       await AUTH.signOut().catch(() => {});
-      S.loading = false; hideLoading();
       showLoginScreen();
       return;
     }
     const userSnap = await DB.collection('users').doc(fbUser.uid).get();
     if (!userSnap.exists) {
-      S.loading = false; hideLoading();
       showFamilySetup(fbUser.uid, fbUser.email.split('@')[0] || 'Usuario', MEMBER_COLORS[0]);
       return;
     }
@@ -2776,7 +2786,6 @@ async function resumeSession(fbUser) {
       color:  profile.color || MEMBER_COLORS[0],
       id:     profile.shortId || profile.nombre.charAt(0).toUpperCase()
     };
-    S.loading = false; hideLoading();
     if (profile.familiaId) {
       await loadFamiliaAndStart(profile.familiaId, fbUser.uid);
     } else if (authState.inviteToken) {
@@ -2786,7 +2795,6 @@ async function resumeSession(fbUser) {
     }
   } catch(e) {
     console.error('Error en resumeSession:', e);
-    S.loading = false; hideLoading();
     showLoginScreen();
   }
 }
@@ -3022,7 +3030,7 @@ function applyData(d) {
 
 function startRealtime() {
   const cached = lsLoad();
-  if (cached) { applyData(cached); }
+  if (cached) { applyData(cached); render(); }
 
   if (USE_FIREBASE && familiaRef) {
     familiaRef.onSnapshot(snap => {
@@ -3083,13 +3091,13 @@ window.addEventListener('unhandledrejection', e=>{
   hideLoading();
 });
 
-// Fallback: si Firebase no responde en 8s
+// Fallback: si Firebase no responde en 5s
 const loadTimeout = setTimeout(()=>{
   if(S.loading){
     S.loading=false; hideLoading();
     if (!authState.currentUser) showLoginScreen(); else render();
   }
-}, 8000);
+}, 5000);
 
 // Arrancar: initAuth gestiona todo el flujo de autenticación.
 initAuth();
