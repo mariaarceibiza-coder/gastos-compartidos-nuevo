@@ -675,6 +675,9 @@ const FUNCION_URL_COACH = 'https://getmensajecoach-6zh7ykkvea-ew.a.run.app';
 // Estado del coach IA (se resetea al cambiar de mes)
 const coachState = { analisis: null, cargando: false, mensajes: [], enviando: false, mesKey: null };
 
+// Estado del bloque de insights IA en tab análisis
+const analisisState = { texto: null, cargando: false, error: false };
+
 async function fetchMensajeIA() {
   if (aiMsg.cargando) return;
   aiMsg.cargando = true;
@@ -806,6 +809,45 @@ async function fetchCoachAnalisis() {
   }
   coachState.cargando = false;
   renderTab('coach');
+}
+
+async function fetchAnalisisIA(regenerar = false) {
+  if (analisisState.cargando) return;
+  if (regenerar) analisisState.texto = null;
+  analisisState.cargando = true;
+  analisisState.error = false;
+  renderTab('analisis');
+
+  const ctx = buildCoachContext();
+  try {
+    const res = await fetch(FUNCION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo: 'insights',
+        categoriasDetalle: ctx.categoriasDetalle,
+        mesAnteriorTotal: ctx.mesAnteriorTotal,
+        mesAnteriorCategorias: ctx.mesAnteriorCategorias,
+        metasDetalle: ctx.metasDetalle,
+        fijosPendientes: ctx.fijosPendientes,
+        totalFijosPendientes: ctx.totalFijosPendientes,
+        ingresos: ctx.ingresos,
+        gastadoMes: ctx.gastadoMes,
+        presupuestoVariables: ctx.presupuestoVariables,
+        proyeccion: ctx.proyeccion,
+        diasRestantes: ctx.diasRestantes,
+        gastosVariables: ctx.gastosVariables
+      })
+    });
+    const data = await res.json();
+    analisisState.texto = data.mensaje || null;
+    analisisState.error = !data.mensaje;
+  } catch(e) {
+    analisisState.error = true;
+    console.error('Error analisis IA:', e);
+  }
+  analisisState.cargando = false;
+  renderTab('analisis');
 }
 
 async function enviarMensajeCoach(texto) {
@@ -1149,6 +1191,28 @@ function renderAnalisis() {
       </div>
     </div>
 
+    ${(()=>{
+      if (analisisState.cargando) return `
+        <div class="card" style="padding:18px 16px">
+          <div style="height:9px;background:var(--cream2);border-radius:6px;margin-bottom:9px;animation:shimmer 1.5s ease-in-out infinite"></div>
+          <div style="height:9px;background:var(--cream2);border-radius:6px;margin-bottom:9px;width:90%;animation:shimmer 1.5s ease-in-out infinite .15s"></div>
+          <div style="height:9px;background:var(--cream2);border-radius:6px;margin-bottom:9px;width:80%;animation:shimmer 1.5s ease-in-out infinite .3s"></div>
+          <div style="height:9px;background:var(--cream2);border-radius:6px;width:85%;animation:shimmer 1.5s ease-in-out infinite .45s"></div>
+        </div>`;
+      if (analisisState.error) return `
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:12px;color:var(--t500);margin-bottom:8px">No se pudo cargar el análisis</div>
+          <button onclick="fetchAnalisisIA()" style="font-size:12px;color:var(--g600);background:none;border:none;cursor:pointer;font-weight:600;padding:0">Reintentar</button>
+        </div>`;
+      if (analisisState.texto) return `
+        <div class="card" style="position:relative;padding-right:40px">
+          <div class="overline mb-4">ANÁLISIS IA</div>
+          <div style="font-size:14px;color:var(--t700);line-height:1.55">${analisisState.texto}</div>
+          <button onclick="fetchAnalisisIA(true)" title="Regenerar" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--t400);padding:2px;line-height:1">↻</button>
+        </div>`;
+      return '';
+    })()}
+
     <div class="card">
       <div style="font-size:15px;font-weight:700;margin-bottom:14px">Dónde se va el dinero</div>
       ${b.vars===0?`<div class="empty">Sin gastos variables este mes</div>`:`
@@ -1473,6 +1537,10 @@ function goTab(t) {
     render();
     document.getElementById('appContent').scrollTop = 0;
     if (!coachState.analisis && !coachState.cargando) fetchCoachAnalisis();
+  } else if (t === 'analisis') {
+    render();
+    document.getElementById('appContent').scrollTop = 0;
+    if (!analisisState.texto && !analisisState.cargando) fetchAnalisisIA();
   } else {
     render();
     document.getElementById('appContent').scrollTop = 0;
