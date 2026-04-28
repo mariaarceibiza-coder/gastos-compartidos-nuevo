@@ -373,6 +373,7 @@
     <div class="tab-screen" id="tab-coach"></div>
     <div class="tab-screen" id="tab-analisis"></div>
     <div class="tab-screen" id="tab-metas"></div>
+    <div class="tab-screen" id="tab-yo"></div>
     <div class="tab-screen" id="tab-familia"></div>
   </div>
 
@@ -391,6 +392,9 @@
     </button>
     <button class="nav-btn" data-tab="metas">
       <span class="nav-icon">✨</span><span class="nav-label">Metas</span>
+    </button>
+    <button class="nav-btn" data-tab="yo">
+      <span class="nav-icon">👤</span><span class="nav-label">Yo</span>
     </button>
     <button class="nav-btn" data-tab="familia">
       <span class="nav-icon">👨‍👩‍👧‍👦</span><span class="nav-label">Familia</span>
@@ -577,8 +581,22 @@ const UI = {
   saveTimer: null,
   syncTimer: null,
   selCat: 'super',
-  editMetaId: null
+  editMetaId: null,
+  addContext: 'familiar',
+  personalSaveTimer: null
 };
+
+// ── ESTADO PERSONAL (privado por usuario) ──
+const SP = {
+  ingresosPropios: 0,
+  aportacionComun: 0,
+  ahorroPersonal: 0,
+  pagosAplazados: [],
+  gastosPersonales: [],
+  historico: {}
+};
+let personalRef = null;
+const personalCoachState = { texto: null, cargando: false, error: false };
 
 // ══════════════════════════════════════════════
 // HELPERS
@@ -662,6 +680,62 @@ function weekRange() {
   return `${f(mon)}–${f(sun)}`;
 }
 const weekNum = () => Math.ceil(new Date().getDate()/7);
+
+// ══════════════════════════════════════════════
+// PERSONAL — HELPERS Y PERSISTENCIA
+// ══════════════════════════════════════════════
+function getPersonalTotals() {
+  const now = new Date();
+  const cuotas = SP.pagosAplazados.reduce((s, p) => s + (Number(p.cuotaMensual) || 0), 0);
+  const gastosMes = SP.gastosPersonales
+    .filter(g => {
+      if (!g.fecha) return false;
+      const d = new Date(g.fecha + 'T00:00:00');
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    })
+    .reduce((s, g) => s + (Number(g.monto) || 0), 0);
+  const saldo = (Number(SP.ingresosPropios) || 0) - (Number(SP.aportacionComun) || 0) - cuotas - gastosMes;
+  return { cuotas, gastosMes, saldo };
+}
+
+function schedulePersonalSave() {
+  if (UI.personalSaveTimer) clearTimeout(UI.personalSaveTimer);
+  UI.personalSaveTimer = setTimeout(savePersonalData, 800);
+}
+
+async function savePersonalData() {
+  if (!USE_FIREBASE || !personalRef) return;
+  try {
+    await personalRef.set({
+      ingresosPropios: Number(SP.ingresosPropios) || 0,
+      aportacionComun: Number(SP.aportacionComun) || 0,
+      ahorroPersonal:  Number(SP.ahorroPersonal)  || 0,
+      pagosAplazados:  SP.pagosAplazados,
+      gastosPersonales: SP.gastosPersonales,
+      historico: SP.historico || {},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { console.error('Error guardando datos personales:', e); }
+}
+
+async function loadPersonalData() {
+  if (!USE_FIREBASE || !DB || !authState.currentUser?.uid) return;
+  const uid = authState.currentUser.uid;
+  personalRef = DB.collection('usuarios').doc(uid).collection('personal').doc('datos');
+  try {
+    const snap = await personalRef.get();
+    if (snap.exists) {
+      const d = snap.data();
+      if (typeof d.ingresosPropios === 'number') SP.ingresosPropios = d.ingresosPropios;
+      if (typeof d.aportacionComun === 'number') SP.aportacionComun = d.aportacionComun;
+      if (typeof d.ahorroPersonal  === 'number') SP.ahorroPersonal  = d.ahorroPersonal;
+      if (Array.isArray(d.pagosAplazados))  SP.pagosAplazados  = d.pagosAplazados;
+      if (Array.isArray(d.gastosPersonales)) SP.gastosPersonales = d.gastosPersonales;
+      if (d.historico && typeof d.historico === 'object') SP.historico = d.historico;
+    }
+    if (UI.tab === 'yo') renderTab('yo');
+  } catch(e) { console.error('Error cargando datos personales:', e); }
+}
 
 // ══════════════════════════════════════════════
 // RENDER — HOME
@@ -848,6 +922,51 @@ async function fetchAnalisisIA(regenerar = false) {
   }
   analisisState.cargando = false;
   renderTab('analisis');
+}
+
+async function fetchCoachPersonal(regenerar = false) {
+  if (personalCoachState.cargando) return;
+  if (regenerar) personalCoachState.texto = null;
+  personalCoachState.cargando = true;
+  personalCoachState.error = false;
+  renderTab('yo');
+  const pt = getPersonalTotals();
+  try {
+    const res = await fetch(FUNCION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo: 'personal',
+        usuario: authState.currentUser?.nombre || 'Usuario',
+        ingresosPropios: Number(SP.ingresosPropios) || 0,
+        aportacionComun: Number(SP.aportacionComun) || 0,
+        ahorroPersonal:  Number(SP.ahorroPersonal)  || 0,
+        totalCuotas: pt.cuotas,
+        gastosPersonalesMes: pt.gastosMes,
+        saldoDisponible: pt.saldo,
+        pagosAplazados: SP.pagosAplazados.map(p => ({
+          nombre: p.nombre,
+          cuotaMensual: Number(p.cuotaMensual) || 0,
+          capitalPendiente: Number(p.capitalPendiente) || 0,
+          mesesRestantes: Number(p.mesesRestantes) || 0
+        })),
+        gastosPersonales: SP.gastosPersonales.slice(-20).map(g => ({
+          descripcion: g.descripcion || '',
+          categoria: g.categoria || 'otros',
+          monto: Number(g.monto) || 0,
+          fecha: g.fecha || ''
+        }))
+      })
+    });
+    const data = await res.json();
+    personalCoachState.texto = data.mensaje || null;
+    personalCoachState.error = !data.mensaje;
+  } catch(e) {
+    personalCoachState.error = true;
+    console.error('Error coach personal:', e);
+  }
+  personalCoachState.cargando = false;
+  renderTab('yo');
 }
 
 async function enviarMensajeCoach(texto) {
@@ -1429,6 +1548,199 @@ function renderFamilia() {
 }
 
 // ══════════════════════════════════════════════
+// RENDER — YO (finanzas personales)
+// ══════════════════════════════════════════════
+function renderYo() {
+  if (!authState.currentUser) {
+    return '<div class="empty" style="padding:40px 20px">Inicia sesión para ver tus finanzas personales</div>';
+  }
+
+  const pt = getPersonalTotals();
+  const { cuotas, gastosMes, saldo } = pt;
+
+  const estadoBadge = saldo > 200
+    ? { emoji: '🟢', label: 'Bien',     cls: 'b-lime' }
+    : saldo >= 0
+    ? { emoji: '🟡', label: 'Ajustado', cls: 'b-amber' }
+    : { emoji: '🔴', label: 'Peligro',  cls: 'b-coral' };
+
+  const now = new Date();
+  const gastosMesArr = [...SP.gastosPersonales]
+    .filter(g => {
+      if (!g.fecha) return false;
+      const d = new Date(g.fecha + 'T00:00:00');
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    })
+    .sort((a, b_) => new Date(b_.fecha) - new Date(a.fecha));
+
+  const coachBlock = personalCoachState.cargando
+    ? `<div style="background:var(--white);padding:16px;border-radius:16px;display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>
+        <div style="flex:1">
+          <div style="height:10px;background:var(--cream2);border-radius:6px;margin-bottom:6px;animation:shimmer 1.5s ease-in-out infinite"></div>
+          <div style="height:10px;background:var(--cream2);border-radius:6px;width:75%;animation:shimmer 1.5s ease-in-out infinite .3s"></div>
+        </div>
+      </div>`
+    : personalCoachState.texto
+    ? `<div style="background:var(--white);padding:16px;border-radius:16px;border-left:3px solid var(--g600)">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px">🌿</div>
+          <div style="flex:1">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t500);margin-bottom:5px">TU COACH PERSONAL</div>
+            <div style="font-size:14px;line-height:1.5;color:var(--t700)">${escH(personalCoachState.texto)}</div>
+          </div>
+          <button style="background:transparent;border:none;color:var(--t300);font-size:16px;cursor:pointer;padding:2px" data-action="refresh-ia-personal">↻</button>
+        </div>
+      </div>`
+    : `<div style="background:var(--white);padding:14px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:13px;color:var(--t500)">🌿 Coach no disponible ahora</div>
+        <button class="btn btn-xs btn-cream" data-action="refresh-ia-personal">Reintentar</button>
+      </div>`;
+
+  return `
+    <div class="screen-header">
+      <div class="overline mb-4">MIS FINANZAS PERSONALES</div>
+      <div class="d-md" style="color:var(--t900)">Yo</div>
+    </div>
+
+    <!-- HERO CARD -->
+    <div style="background:var(--g700);border-radius:var(--radius);padding:24px 18px;margin:0 14px 10px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:var(--g800);border-radius:50%;opacity:.4"></div>
+      <div style="position:absolute;bottom:-20px;right:30px;width:90px;height:90px;background:var(--g600);border-radius:50%;opacity:.35"></div>
+      <div style="position:relative;z-index:1">
+        <div class="overline-w mb-4">TUS FINANZAS · ${escH(authState.currentUser.nombre.toUpperCase())}</div>
+        <div style="font-family:var(--font-d);font-size:52px;font-weight:normal;line-height:1;letter-spacing:-2px;color:white;margin-bottom:8px">${fmt(saldo)} €</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="badge ${estadoBadge.cls}">${estadoBadge.emoji} ${estadoBadge.label}</div>
+          <div style="font-size:12px;opacity:.7;color:white">saldo disponible personal</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESUMEN 3 COLUMNAS -->
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="text-align:center">
+          <div class="overline mb-4">Ingresos</div>
+          <div style="font-size:17px;font-weight:800;color:var(--t900)">${fmtI(SP.ingresosPropios)} €</div>
+        </div>
+        <div style="text-align:center;border-left:1px solid var(--cream2);border-right:1px solid var(--cream2)">
+          <div class="overline mb-4">Aportación</div>
+          <div style="font-size:17px;font-weight:800;color:var(--coral)">${fmtI(SP.aportacionComun)} €</div>
+        </div>
+        <div style="text-align:center">
+          <div class="overline mb-4">Gastos mes</div>
+          <div style="font-size:17px;font-weight:800;color:var(--t900)">${fmt(gastosMes)} €</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITAR INGRESOS Y APORTACIÓN -->
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Mis ingresos y aportación al hogar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-lbl">Ingresos propios (€)</label>
+          <input type="number" step="0.01" value="${SP.ingresosPropios}" data-field="personal-ingresos"
+            style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
+        </div>
+        <div>
+          <label class="form-lbl">Aportación común (€)</label>
+          <input type="number" step="0.01" value="${SP.aportacionComun}" data-field="personal-aportacion"
+            style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGOS APLAZADOS -->
+    <div class="sec-divider">
+      <div class="sec-title">Pagos aplazados</div>
+      <div style="font-size:13px;font-weight:700;color:var(--coral)">${fmt(cuotas)} €/mes</div>
+    </div>
+    <div class="p14">
+      ${SP.pagosAplazados.length === 0
+        ? '<div class="empty" style="padding:14px 0">Sin pagos aplazados</div>'
+        : SP.pagosAplazados.map(p => {
+            const mesesOrig = Math.max(Number(p.mesesOriginales) || Number(p.mesesRestantes) || 1, 1);
+            const mesesRest = Number(p.mesesRestantes) || 0;
+            const pctDone   = Math.max(0, Math.min(100, Math.round(((mesesOrig - mesesRest) / mesesOrig) * 100)));
+            const barColor  = mesesRest <= 6 ? 'var(--g600)' : mesesRest <= 18 ? 'var(--amber)' : 'var(--coral)';
+            return `<div class="card" style="margin-bottom:10px;padding:14px 16px">
+              <div class="flex-bc mb-8">
+                <div class="flex-c gap-10">
+                  <div class="check-ring ${p.pagado ? 'on' : ''}" data-action="toggle-pago-aplazado" data-id="${p.id}" title="Marcar cuota del mes">${p.pagado ? '✓' : ''}</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:700;${p.pagado ? 'text-decoration:line-through;color:var(--t300)' : ''}">${escH(p.nombre)}</div>
+                    <div style="font-size:12px;color:var(--t500)">${fmt(p.cuotaMensual)} €/mes · ${mesesRest} meses restantes</div>
+                  </div>
+                </div>
+                <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-pago-aplazado" data-id="${p.id}">🗑</button>
+              </div>
+              <div class="flex-bc" style="margin-bottom:6px">
+                <div style="font-size:12px;color:var(--t500)">Capital pendiente: <strong>${fmt(p.capitalPendiente)} €</strong></div>
+                <div style="font-size:11px;color:var(--t300)">${pctDone}% amortizado</div>
+              </div>
+              <div class="track-sm">
+                <div class="fill" style="width:${pctDone}%;background:${barColor}"></div>
+              </div>
+            </div>`;
+          }).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:8px" data-action="open-add-pago-aplazado">
+        + Añadir pago aplazado
+      </button>
+    </div>
+
+    <!-- GASTOS PERSONALES DEL MES -->
+    <div class="sec-divider">
+      <div class="sec-title">Mis gastos del mes</div>
+      <div style="font-size:12px;color:var(--t500)">${fmt(gastosMes)} €</div>
+    </div>
+    <div class="flex-c gap-10 p14 mb-10">
+      <button class="btn btn-lime btn-w100" style="border-radius:16px" data-action="open-add-gasto-personal"><span style="font-size:17px">+</span> Añadir gasto</button>
+    </div>
+    <div class="p14">
+      ${gastosMesArr.length > 0
+        ? gastosMesArr.map(g => `
+            <div class="tx-item">
+              <div class="tx-ico">${cat(g.categoria).icon}</div>
+              <div style="flex:1">
+                <div class="tx-name">${escH(g.descripcion || cat(g.categoria).label)}</div>
+                <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha || '')}</div>
+              </div>
+              <div class="tx-amt">${fmt(g.monto)} €</div>
+              <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-gasto-personal" data-id="${g.id}">🗑</button>
+            </div>`).join('')
+        : '<div class="empty">Sin gastos personales este mes</div>'}
+    </div>
+
+    <!-- AHORRO PERSONAL -->
+    <div class="sec-divider"><div class="sec-title">Mi ahorro personal</div></div>
+    <div class="p14">
+      <div class="card-lime" style="margin:0 0 10px">
+        <div class="flex-bc mb-12">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g800);margin-bottom:4px">MI AHORRO · SOLO VISIBLE PARA TI</div>
+            <div style="font-size:32px;font-weight:800;color:var(--g800)">${fmt(SP.ahorroPersonal)} €</div>
+          </div>
+          <div style="font-size:36px">🌱</div>
+        </div>
+        <label class="form-lbl" style="color:var(--g800)">Actualizar saldo de ahorro</label>
+        <input type="number" step="0.01" value="${SP.ahorroPersonal}" data-field="personal-ahorro"
+          style="width:100%;padding:11px 14px;background:rgba(255,255,255,.65);border:1.5px solid rgba(0,0,0,.1);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--g800);outline:none" />
+      </div>
+    </div>
+
+    <!-- COACH IA PERSONAL -->
+    <div class="sec-divider"><div class="sec-title">Tu coach personal</div></div>
+    <div class="p14" style="margin-bottom:16px">
+      ${coachBlock}
+    </div>
+
+    <div style="height:8px"></div>
+  `;
+}
+
+// ══════════════════════════════════════════════
 // RENDER — GASTOS
 // ══════════════════════════════════════════════
 function renderGastos() {
@@ -1505,10 +1817,10 @@ function renderGastos() {
 // MAIN RENDER
 // ══════════════════════════════════════════════
 function renderTab(id) {
-  const map = {hogar:renderHome, gastos:renderGastos, coach:renderCoach, analisis:renderAnalisis, metas:renderMetas, familia:renderFamilia};
+  const map = {hogar:renderHome, gastos:renderGastos, coach:renderCoach, analisis:renderAnalisis, metas:renderMetas, familia:renderFamilia, yo:renderYo};
   const el = document.getElementById(`tab-${id}`);
   if (el && map[id]) el.innerHTML = map[id]();
-  ['hogar','gastos','coach','analisis','metas','familia'].forEach(t=>{
+  ['hogar','gastos','coach','analisis','metas','familia','yo'].forEach(t=>{
     const te = document.getElementById(`tab-${t}`);
     if(te) te.classList.toggle('active', t===id);
   });
@@ -1541,6 +1853,10 @@ function goTab(t) {
     render();
     document.getElementById('appContent').scrollTop = 0;
     if (!analisisState.texto && !analisisState.cargando) fetchAnalisisIA();
+  } else if (t === 'yo') {
+    render();
+    document.getElementById('appContent').scrollTop = 0;
+    if (!personalCoachState.texto && !personalCoachState.cargando) fetchCoachPersonal();
   } else {
     render();
     document.getElementById('appContent').scrollTop = 0;
@@ -1589,20 +1905,56 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
   const fecha = document.getElementById('inFecha').value;
   const desc  = document.getElementById('inDesc').value;
   if(!monto||!fecha){ document.getElementById('inMonto').style.borderColor='var(--coral)'; return; }
-  S.gastosVariables.push({
-    id: Date.now(),
-    fecha, monto:Number(monto),
-    descripcion: desc||'',
-    categoria: UI.selCat,
-    pagadoPor: authState.currentUser?.id || 'M'
-  });
-  document.getElementById('inMonto').value='';
-  document.getElementById('inDesc').value='';
-  document.getElementById('inFecha').value='';
-  closeAdd();
-  render();
-  scheduleSave();
+
+  if (UI.addContext === 'personal') {
+    SP.gastosPersonales.push({
+      id: Date.now(),
+      fecha, monto: Number(monto),
+      descripcion: desc || '',
+      categoria: UI.selCat
+    });
+    UI.addContext = 'familiar';
+    document.getElementById('inMonto').value='';
+    document.getElementById('inDesc').value='';
+    document.getElementById('inFecha').value='';
+    closeAdd();
+    renderTab('yo');
+    schedulePersonalSave();
+  } else {
+    S.gastosVariables.push({
+      id: Date.now(),
+      fecha, monto:Number(monto),
+      descripcion: desc||'',
+      categoria: UI.selCat,
+      pagadoPor: authState.currentUser?.id || 'M'
+    });
+    document.getElementById('inMonto').value='';
+    document.getElementById('inDesc').value='';
+    document.getElementById('inFecha').value='';
+    closeAdd();
+    render();
+    scheduleSave();
+  }
 });
+
+// ══════════════════════════════════════════════
+// ADD PAGO APLAZADO MODAL
+// ══════════════════════════════════════════════
+function openAddPagoAplazado() {
+  const o = document.getElementById('addPagoAplazadoOverlay');
+  if (!o) return;
+  o.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  ['inPagoNombre','inPagoCuota','inPagoCapital','inPagoMeses'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.style.borderColor = ''; }
+  });
+}
+function closeAddPagoAplazado() {
+  const o = document.getElementById('addPagoAplazadoOverlay');
+  if (o) o.classList.remove('open');
+  document.body.style.overflow = '';
+}
 
 // ══════════════════════════════════════════════
 // HISTORICO MODAL
@@ -1740,7 +2092,7 @@ document.addEventListener('click', e=>{
   if(!btn) return;
   const act = btn.dataset.action;
 
-  if(act==='open-add')      { openAdd(); return; }
+  if(act==='open-add')      { UI.addContext='familiar'; openAdd(); return; }
   if(act==='open-historico'){ openHistorico(); return; }
   if(act==='logout')         { logout(); return; }
   if(act==='refresh-ia')    { aiMsg.texto=null; fetchMensajeIA(); return; }
@@ -1794,6 +2146,27 @@ document.addEventListener('click', e=>{
     }
     render(); return;
   }
+  if(act==='open-add-pago-aplazado') { openAddPagoAplazado(); return; }
+  if(act==='del-pago-aplazado') {
+    const id=Number(btn.dataset.id);
+    SP.pagosAplazados=SP.pagosAplazados.filter(x=>x.id!==id);
+    renderTab('yo'); schedulePersonalSave(); return;
+  }
+  if(act==='toggle-pago-aplazado') {
+    const id=Number(btn.dataset.id);
+    SP.pagosAplazados=SP.pagosAplazados.map(x=>x.id===id?{...x,pagado:!x.pagado}:x);
+    renderTab('yo'); schedulePersonalSave(); return;
+  }
+  if(act==='open-add-gasto-personal') {
+    UI.addContext='personal'; openAdd(); return;
+  }
+  if(act==='del-gasto-personal') {
+    const id=Number(btn.dataset.id);
+    SP.gastosPersonales=SP.gastosPersonales.filter(x=>x.id!==id);
+    renderTab('yo'); schedulePersonalSave(); return;
+  }
+  if(act==='refresh-ia-personal') { fetchCoachPersonal(true); return; }
+
   if(act==='del-miembro') {
     const id = btn.dataset.id;
     if (S.miembros.length <= 1) return;
@@ -1849,12 +2222,13 @@ document.addEventListener('input', e => {
 // ══════════════════════════════════════════════
 // FIELD PROTECTION (ingresos/saldoAhorro)
 // ══════════════════════════════════════════════
-const protectedFields=['ingresos','saldoAhorro'];
+const protectedFields=['ingresos','saldoAhorro','personal-ingresos','personal-aportacion','personal-ahorro'];
 document.addEventListener('focusin', e=>{
   const f=e.target.dataset.field;
   if(protectedFields.includes(f) || (f && f.startsWith('fijo-'))){
     UI.editingField=f;
     if(UI.saveTimer){clearTimeout(UI.saveTimer);UI.saveTimer=null;}
+    if(UI.personalSaveTimer){clearTimeout(UI.personalSaveTimer);UI.personalSaveTimer=null;}
   }
 },true);
 
@@ -1889,6 +2263,9 @@ document.addEventListener('focusout', e2=>{
 }, true);
 document.addEventListener('focusout', e=>{
   const f=e.target.dataset.field;
+  if(f==='personal-ingresos')  { SP.ingresosPropios=Number(e.target.value||0); UI.editingField=null; renderTab('yo'); schedulePersonalSave(); return; }
+  if(f==='personal-aportacion'){ SP.aportacionComun=Number(e.target.value||0); UI.editingField=null; renderTab('yo'); schedulePersonalSave(); return; }
+  if(f==='personal-ahorro')    { SP.ahorroPersonal =Number(e.target.value||0); UI.editingField=null; renderTab('yo'); schedulePersonalSave(); return; }
   if(protectedFields.includes(f)){
     if(f==='ingresos')    S.ingresos=Number(e.target.value||0);
     if(f==='saldoAhorro') S.saldoAhorro=Number(e.target.value||0);
@@ -2177,6 +2554,7 @@ async function loadFamiliaAndStart(familiaId, uid) {
     familiaDocRef = DB.collection('familias').doc(familiaId);
     hideLoginScreen();
     startRealtime();
+    loadPersonalData();
   } catch(e) {
     console.error('Error cargando familia:', e);
     hideLoginScreen(); startRealtime();
@@ -2249,6 +2627,7 @@ async function crearFamilia(uid, nombre, color) {
     familiaDocRef = DB.collection('familias').doc(famRef.id);
     hideLoginScreen();
     startRealtime();
+    loadPersonalData();
   } catch(e) {
     console.error(e);
     setAuthError('famError', 'Error al crear la familia, inténtalo de nuevo');
@@ -2287,6 +2666,7 @@ async function acceptPendingInvite(uid, profile) {
     familiaDocRef = DB.collection('familias').doc(inv.familiaId);
     hideLoginScreen();
     startRealtime();
+    loadPersonalData();
   } catch(e) {
     console.error(e);
     setAuthError('famError', 'Error al unirse a la familia');
@@ -2483,6 +2863,58 @@ initAuth();
   });
   document.getElementById('inviteOverlay')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  });
+</script>
+
+<!-- ADD PAGO APLAZADO OVERLAY -->
+<div class="overlay" id="addPagoAplazadoOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">Nuevo pago aplazado</span>
+      <button class="btn btn-cream btn-xs" id="closeAddPagoAplazado">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Nombre</label>
+      <input class="form-in" type="text" placeholder="ej: Préstamo coche…" id="inPagoNombre" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Cuota mensual (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inPagoCuota" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Capital pendiente (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inPagoCapital" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Meses restantes</label>
+      <input class="form-in" type="number" step="1" min="1" placeholder="0" id="inPagoMeses" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec" style="margin-top:4px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="savePagoAplazadoBtn">Guardar →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('closeAddPagoAplazado')?.addEventListener('click', () => closeAddPagoAplazado());
+  document.getElementById('addPagoAplazadoOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddPagoAplazado();
+  });
+  document.getElementById('savePagoAplazadoBtn')?.addEventListener('click', () => {
+    const nombre  = document.getElementById('inPagoNombre').value.trim();
+    const cuota   = Number(document.getElementById('inPagoCuota').value || 0);
+    if (!nombre || !cuota) {
+      if (!nombre) document.getElementById('inPagoNombre').style.borderColor = 'var(--coral)';
+      if (!cuota)  document.getElementById('inPagoCuota').style.borderColor  = 'var(--coral)';
+      return;
+    }
+    const capital = Number(document.getElementById('inPagoCapital').value || 0);
+    const meses   = Number(document.getElementById('inPagoMeses').value  || 0);
+    SP.pagosAplazados.push({ id: Date.now(), nombre, cuotaMensual: cuota, capitalPendiente: capital, mesesRestantes: meses, mesesOriginales: meses, pagado: false });
+    closeAddPagoAplazado();
+    renderTab('yo');
+    schedulePersonalSave();
   });
 </script>
 </body>

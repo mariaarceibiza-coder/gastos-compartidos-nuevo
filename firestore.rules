@@ -46,6 +46,11 @@ service cloud.firestore {
       allow update: if request.auth != null;
     }
 
+    // ── Datos personales privados ────────────────────────────────────
+    match /usuarios/{userId}/personal/{docId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────
     function onlyAddingSelf(resource, request) {
       // Permite que el nuevo campo añadido sea únicamente el uid del solicitante
