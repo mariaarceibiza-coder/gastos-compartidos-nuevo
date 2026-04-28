@@ -796,7 +796,7 @@ async function fetchCoachAnalisis() {
     const res = await fetch(FUNCION_URL_COACH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildCoachContext())
+      body: JSON.stringify({ tipo: 'analisis', ...buildCoachContext() })
     });
     const data = await res.json();
     coachState.analisis = data.mensaje || null;
@@ -817,7 +817,7 @@ async function enviarMensajeCoach(texto) {
     const res = await fetch(FUNCION_URL_COACH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...buildCoachContext(), historial: coachState.mensajes })
+      body: JSON.stringify({ tipo: 'chat', historial: coachState.mensajes, ...buildCoachContext() })
     });
     const data = await res.json();
     coachState.mensajes.push({ role: 'assistant', content: data.mensaje || 'Lo siento, no pude procesar tu pregunta.' });
