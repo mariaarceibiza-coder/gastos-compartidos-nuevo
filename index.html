@@ -758,14 +758,33 @@ const aiMsg = { texto: null, cargando: false, error: false };
 const FUNCION_URL = 'https://getmensajecoach-6zh7ykkvea-ew.a.run.app';
 const FUNCION_URL_COACH = 'https://getmensajecoach-6zh7ykkvea-ew.a.run.app';
 
+const COACH_CACHE_TTL = 6 * 60 * 60 * 1000;
+function _cacheKey(tipo) { return `coach_${tipo}_${S.mesActual}_${S.añoActual}`; }
+function _cacheGet(tipo) {
+  try {
+    const raw = sessionStorage.getItem(_cacheKey(tipo));
+    if (!raw) return null;
+    const { texto, timestamp } = JSON.parse(raw);
+    if (Date.now() - timestamp > COACH_CACHE_TTL) { sessionStorage.removeItem(_cacheKey(tipo)); return null; }
+    return texto;
+  } catch { return null; }
+}
+function _cacheSet(tipo, texto) {
+  try { sessionStorage.setItem(_cacheKey(tipo), JSON.stringify({ texto, timestamp: Date.now() })); } catch {}
+}
+
 // Estado del coach IA (se resetea al cambiar de mes)
 const coachState = { analisis: null, cargando: false, mensajes: [], enviando: false, mesKey: null };
 
 // Estado del bloque de insights IA en tab análisis
 const analisisState = { texto: null, cargando: false, error: false };
 
-async function fetchMensajeIA() {
+async function fetchMensajeIA(force = false) {
   if (aiMsg.cargando) return;
+  if (!force) {
+    const cached = _cacheGet('inicio');
+    if (cached) { aiMsg.texto = cached; renderTab('hogar'); return; }
+  }
   aiMsg.cargando = true;
   aiMsg.error = false;
   renderTab('hogar');
@@ -822,11 +841,16 @@ async function fetchMensajeIA() {
           aportado: Number(m.aportado) || 0,
           porcentaje: pct(Number(m.aportado) || 0, Number(m.objetivo) || 0),
           falta: Math.max(0, (Number(m.objetivo) || 0) - (Number(m.aportado) || 0))
-        }))
+        })),
+        nombresFamilia: S.miembros.map(m => m.nombre),
+        nombreFamilia: authState.familia?.nombre || '',
+        perfil: authState.familia?.perfil || {},
+        ahorroPlaneado: S.gastosFijos.find(g => g.categoria.toLowerCase().includes('ahorro'))?.presupuesto || 0
       })
     });
     const data = await res.json();
     aiMsg.texto = data.mensaje || null;
+    if (aiMsg.texto) _cacheSet('inicio', aiMsg.texto);
     aiMsg.error = !data.mensaje;
   } catch(e) {
     aiMsg.error = true;
@@ -873,12 +897,20 @@ function buildCoachContext() {
     fijosPendientes: fijosPend.map(g=>({nombre:g.categoria,importe:Number(g.presupuesto)||0})),
     totalFijosPendientes: fijosPend.reduce((s,g)=>s+(Number(g.presupuesto)||0),0),
     metasDetalle: S.metas.map(m=>({nombre:m.nombre,icono:m.icono,objetivo:Number(m.objetivo)||0,aportado:Number(m.aportado)||0,porcentaje:pct(Number(m.aportado)||0,Number(m.objetivo)||0),falta:Math.max(0,(Number(m.objetivo)||0)-(Number(m.aportado)||0))})),
-    gastosVariables: S.gastosVariables.map(g=>({descripcion:g.descripcion||'',categoria:g.categoria||'otros',monto:Number(g.monto)||0,fecha:g.fecha||''}))
+    gastosVariables: S.gastosVariables.map(g=>({descripcion:g.descripcion||'',categoria:g.categoria||'otros',monto:Number(g.monto)||0,fecha:g.fecha||''})),
+    nombresFamilia: S.miembros.map(m => m.nombre),
+    nombreFamilia: authState.familia?.nombre || '',
+    perfil: authState.familia?.perfil || {},
+    ahorroPlaneado: S.gastosFijos.find(g => g.categoria.toLowerCase().includes('ahorro'))?.presupuesto || 0
   };
 }
 
-async function fetchCoachAnalisis() {
+async function fetchCoachAnalisis(force = false) {
   if (coachState.cargando) return;
+  if (!force) {
+    const cached = _cacheGet('analisis');
+    if (cached) { coachState.analisis = cached; renderTab('coach'); return; }
+  }
   coachState.cargando = true;
   renderTab('coach');
   try {
@@ -889,6 +921,7 @@ async function fetchCoachAnalisis() {
     });
     const data = await res.json();
     coachState.analisis = data.mensaje || null;
+    if (coachState.analisis) _cacheSet('analisis', coachState.analisis);
   } catch(e) {
     coachState.analisis = null;
     console.error('Error coach IA:', e);
@@ -900,6 +933,10 @@ async function fetchCoachAnalisis() {
 async function fetchAnalisisIA(regenerar = false) {
   if (analisisState.cargando) return;
   if (regenerar) analisisState.texto = null;
+  if (!regenerar) {
+    const cached = _cacheGet('insights');
+    if (cached) { analisisState.texto = cached; renderTab('analisis'); return; }
+  }
   analisisState.cargando = true;
   analisisState.error = false;
   renderTab('analisis');
@@ -922,11 +959,16 @@ async function fetchAnalisisIA(regenerar = false) {
         presupuestoVariables: ctx.presupuestoVariables,
         proyeccion: ctx.proyeccion,
         diasRestantes: ctx.diasRestantes,
-        gastosVariables: ctx.gastosVariables
+        gastosVariables: ctx.gastosVariables,
+        nombresFamilia: ctx.nombresFamilia,
+        nombreFamilia: ctx.nombreFamilia,
+        perfil: ctx.perfil,
+        ahorroPlaneado: ctx.ahorroPlaneado
       })
     });
     const data = await res.json();
     analisisState.texto = data.mensaje || null;
+    if (analisisState.texto) _cacheSet('insights', analisisState.texto);
     analisisState.error = !data.mensaje;
   } catch(e) {
     analisisState.error = true;
@@ -939,6 +981,10 @@ async function fetchAnalisisIA(regenerar = false) {
 async function fetchCoachPersonal(regenerar = false) {
   if (personalCoachState.cargando) return;
   if (regenerar) personalCoachState.texto = null;
+  if (!regenerar) {
+    const cached = _cacheGet('personal');
+    if (cached) { personalCoachState.texto = cached; renderTab('yo'); return; }
+  }
   personalCoachState.cargando = true;
   personalCoachState.error = false;
   renderTab('yo');
@@ -967,11 +1013,16 @@ async function fetchCoachPersonal(regenerar = false) {
           categoria: g.categoria || 'otros',
           monto: Number(g.monto) || 0,
           fecha: g.fecha || ''
-        }))
+        })),
+        nombresFamilia: S.miembros.map(m => m.nombre),
+        nombreFamilia: authState.familia?.nombre || '',
+        perfil: authState.familia?.perfil || {},
+        ahorroPlaneado: S.gastosFijos.find(g => g.categoria.toLowerCase().includes('ahorro'))?.presupuesto || 0
       })
     });
     const data = await res.json();
     personalCoachState.texto = data.mensaje || null;
+    if (personalCoachState.texto) _cacheSet('personal', personalCoachState.texto);
     personalCoachState.error = !data.mensaje;
   } catch(e) {
     personalCoachState.error = true;
@@ -2317,10 +2368,10 @@ document.addEventListener('click', e=>{
   if(act==='open-add')      { UI.addContext='familiar'; openAdd(); return; }
   if(act==='open-historico'){ openHistorico(); return; }
   if(act==='logout')         { logout(); return; }
-  if(act==='refresh-ia')    { aiMsg.texto=null; fetchMensajeIA(); return; }
+  if(act==='refresh-ia')    { aiMsg.texto=null; fetchMensajeIA(true); return; }
   if(act==='close-historico'){ closeHistorico(); return; }
   if(act==='aportar-meta')  { openMetaModal(btn.dataset.id); return; }
-  if(act==='retry-coach')   { fetchCoachAnalisis(); return; }
+  if(act==='retry-coach')   { fetchCoachAnalisis(true); return; }
 
   if(act==='load-mes') {
     const k=btn.dataset.key;
