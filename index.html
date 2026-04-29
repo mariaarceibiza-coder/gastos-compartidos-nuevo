@@ -486,6 +486,51 @@
   </div>
 </div>
 
+<!-- APORTAR META PERSONAL OVERLAY -->
+<div class="overlay" id="metaPersonalOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700" id="metaPersonalModalTitle">Aportar a meta</span>
+      <button class="btn btn-cream btn-xs" id="closeMetaPersonal">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Importe a aportar (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inMetaPersonalImporte" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveMetaPersonalBtn">Aportar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITAR / CREAR META PERSONAL OVERLAY -->
+<div class="overlay" id="editMetaPersonalOverlay">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700" id="editMetaPersonalTitle">Nueva meta</span>
+      <button class="btn btn-cream btn-xs" id="closeEditMetaPersonal">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Nombre</label>
+      <input class="form-in" type="text" placeholder="Ej: Vacaciones en Roma" id="inMetaPersonalNombre" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Objetivo (€)</label>
+      <input class="form-in" type="number" step="0.01" placeholder="0.00" id="inMetaPersonalObjetivo" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Emoji</label>
+      <div class="emoji-grid" id="emojiGridPersonal"></div>
+    </div>
+    <div class="form-sec" style="display:flex;gap:8px">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px;flex:1" id="saveEditMetaPersonalBtn">Guardar</button>
+      <button class="btn btn-cream btn-xs" style="border-radius:16px;padding:15px;font-size:20px;display:none" id="delEditMetaPersonalBtn">🗑️</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 // FIREBASE
@@ -606,6 +651,7 @@ const SP = {
   pagosAplazados: [],
   gastosPersonales: [],
   pendientesCobro: [],
+  metasPersonales: [],
   historico: {}
 };
 let personalRef = null;
@@ -730,6 +776,7 @@ async function savePersonalData() {
       pagosAplazados:  SP.pagosAplazados,
       gastosPersonales: SP.gastosPersonales,
       pendientesCobro: SP.pendientesCobro,
+      metasPersonales: SP.metasPersonales,
       historico: SP.historico || {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -749,7 +796,8 @@ async function loadPersonalData() {
       if (typeof d.ahorroPersonal  === 'number') SP.ahorroPersonal  = d.ahorroPersonal;
       if (Array.isArray(d.pagosAplazados))  SP.pagosAplazados  = d.pagosAplazados;
       if (Array.isArray(d.gastosPersonales)) SP.gastosPersonales = d.gastosPersonales;
-      if (Array.isArray(d.pendientesCobro)) SP.pendientesCobro = d.pendientesCobro;
+      if (Array.isArray(d.pendientesCobro))  SP.pendientesCobro  = d.pendientesCobro;
+      if (Array.isArray(d.metasPersonales))  SP.metasPersonales  = d.metasPersonales;
       if (d.historico && typeof d.historico === 'object') SP.historico = d.historico;
     }
     if (UI.tab === 'yo') renderTab('yo');
@@ -1949,6 +1997,38 @@ function renderYo() {
         : '<div class="empty">Sin gastos personales este mes</div>'}
     </div>
 
+    <!-- METAS PERSONALES -->
+    <div class="sec-divider"><div class="sec-title">Mis metas</div></div>
+    <div class="p14">
+      ${SP.metasPersonales.map(m=>{
+        const p=pct(m.aportado,m.objetivo);
+        const on=p>=40;
+        return `<div class="goal-item">
+          <div class="flex-bc mb-12">
+            <div class="flex-c gap-10">
+              <div style="font-size:28px;width:44px;height:44px;background:var(--cream);border-radius:12px;display:flex;align-items:center;justify-content:center">${m.icono}</div>
+              <div>
+                <div style="font-size:15px;font-weight:700">${escH(m.nombre)}</div>
+                <div style="font-size:12px;color:var(--t500)">${fmt(m.aportado)} € de ${fmt(m.objetivo)} €</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="goal-pct ${on?'on':'off'}">${p}%</div>
+              <button class="btn btn-cream btn-xs" data-action="edit-meta-personal" data-id="${m.id}" style="padding:5px 9px;font-size:13px" title="Editar meta">✏️</button>
+            </div>
+          </div>
+          <div class="track"><div class="fill ${on?'fill-lime':'fill-coral'}" style="width:${Math.min(p,100)}%"></div></div>
+          <div class="flex-bc" style="margin-top:8px">
+            <span style="font-size:12px;color:var(--t300)">Faltan ${fmt(Math.max(0,m.objetivo-m.aportado))} €</span>
+            <button class="btn-ghost btn-xs" data-action="aportar-meta-personal" data-id="${m.id}">+ aportar →</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:16px" data-action="add-meta-personal">
+        + Nueva meta
+      </button>
+    </div>
+
     <!-- AHORRO PERSONAL -->
     <div class="sec-divider"><div class="sec-title">Mi ahorro personal</div></div>
     <div class="p14">
@@ -2384,6 +2464,96 @@ document.getElementById('delEditMetaBtn').addEventListener('click', ()=>{
 });
 
 // ══════════════════════════════════════════════
+// METAS PERSONALES
+// ══════════════════════════════════════════════
+let _editMetaPersonalId = null;
+let _editMetaPersonalEmoji = META_EMOJIS[0];
+
+function openMetaPersonalModal(id) {
+  UI.editMetaPersonalAportarId = id;
+  const m = SP.metasPersonales.find(x => x.id === Number(id));
+  if (m) document.getElementById('metaPersonalModalTitle').textContent = `Aportar a: ${m.nombre}`;
+  document.getElementById('inMetaPersonalImporte').value = '';
+  document.getElementById('metaPersonalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMetaPersonal() {
+  document.getElementById('metaPersonalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('closeMetaPersonal').addEventListener('click', closeMetaPersonal);
+document.getElementById('metaPersonalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('metaPersonalOverlay')) closeMetaPersonal();
+});
+document.getElementById('saveMetaPersonalBtn').addEventListener('click', () => {
+  const val = Number(document.getElementById('inMetaPersonalImporte').value || 0);
+  if (!val || val <= 0) return;
+  SP.metasPersonales = SP.metasPersonales.map(m =>
+    m.id === Number(UI.editMetaPersonalAportarId) ? {...m, aportado: m.aportado + val} : m
+  );
+  closeMetaPersonal();
+  renderTab('yo');
+  schedulePersonalSave();
+});
+
+function openEditMetaPersonalSheet(id) {
+  _editMetaPersonalId = id || null;
+  const m = id ? SP.metasPersonales.find(x => x.id === Number(id)) : null;
+  _editMetaPersonalEmoji = m?.icono || META_EMOJIS[0];
+
+  document.getElementById('editMetaPersonalTitle').textContent = m ? 'Editar meta' : 'Nueva meta';
+  document.getElementById('inMetaPersonalNombre').value = m?.nombre || '';
+  document.getElementById('inMetaPersonalObjetivo').value = m?.objetivo || '';
+  document.getElementById('delEditMetaPersonalBtn').style.display = m ? '' : 'none';
+
+  const grid = document.getElementById('emojiGridPersonal');
+  grid.innerHTML = META_EMOJIS.map(e =>
+    `<button class="emoji-btn${e === _editMetaPersonalEmoji ? ' selected' : ''}" data-emoji="${e}">${e}</button>`
+  ).join('');
+
+  document.getElementById('editMetaPersonalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEditMetaPersonal() {
+  document.getElementById('editMetaPersonalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('closeEditMetaPersonal').addEventListener('click', closeEditMetaPersonal);
+document.getElementById('editMetaPersonalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('editMetaPersonalOverlay')) closeEditMetaPersonal();
+});
+document.getElementById('emojiGridPersonal').addEventListener('click', e => {
+  const btn = e.target.closest('.emoji-btn');
+  if (!btn) return;
+  _editMetaPersonalEmoji = btn.dataset.emoji;
+  document.getElementById('emojiGridPersonal').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b === btn));
+});
+document.getElementById('saveEditMetaPersonalBtn').addEventListener('click', () => {
+  const nombre = document.getElementById('inMetaPersonalNombre').value.trim();
+  if (!nombre) return;
+  const objetivo = Number(document.getElementById('inMetaPersonalObjetivo').value || 0);
+  if (_editMetaPersonalId) {
+    SP.metasPersonales = SP.metasPersonales.map(m => m.id === Number(_editMetaPersonalId)
+      ? {...m, nombre, objetivo, icono: _editMetaPersonalEmoji}
+      : m);
+  } else {
+    SP.metasPersonales.push({id: Date.now(), nombre, icono: _editMetaPersonalEmoji, objetivo, aportado: 0});
+  }
+  closeEditMetaPersonal();
+  renderTab('yo');
+  schedulePersonalSave();
+});
+document.getElementById('delEditMetaPersonalBtn').addEventListener('click', () => {
+  if (!_editMetaPersonalId) return;
+  const m = SP.metasPersonales.find(x => x.id === Number(_editMetaPersonalId));
+  if (m && !confirm(`¿Eliminar la meta "${m.nombre}"?`)) return;
+  SP.metasPersonales = SP.metasPersonales.filter(x => x.id !== Number(_editMetaPersonalId));
+  closeEditMetaPersonal();
+  renderTab('yo');
+  schedulePersonalSave();
+});
+
+// ══════════════════════════════════════════════
 // EDITAR GASTO FIJO
 // ══════════════════════════════════════════════
 let _editFijoId = null;
@@ -2558,6 +2728,9 @@ document.addEventListener('click', e=>{
     renderTab('yo'); schedulePersonalSave(); return;
   }
   if(act==='refresh-ia-personal') { fetchCoachPersonal(true); return; }
+  if(act==='add-meta-personal')    { openEditMetaPersonalSheet(null); return; }
+  if(act==='edit-meta-personal')   { openEditMetaPersonalSheet(btn.dataset.id); return; }
+  if(act==='aportar-meta-personal'){ openMetaPersonalModal(btn.dataset.id); return; }
 
   if(act==='del-miembro') {
     const id = btn.dataset.id;
