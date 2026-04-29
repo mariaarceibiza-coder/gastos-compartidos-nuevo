@@ -1734,7 +1734,7 @@ function renderYo() {
 
   const pt = getPersonalTotals();
   const { cuotas, gastosMes, saldo } = pt;
-  const enTuCuenta = (Number(SP.ingresosPropios) || 0) - (Number(SP.aportacionComun) || 0);
+  const enTuCuenta = (Number(SP.ingresosPropios) || 0) - (Number(SP.aportacionComun) || 0) - gastosMes;
 
   const estadoBadge = saldo > 200
     ? { emoji: '🟢', label: 'Bien',     cls: 'b-lime' }
