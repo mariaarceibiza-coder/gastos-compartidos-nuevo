@@ -1467,6 +1467,7 @@ function renderFamilia() {
   const b = getBudget();
   const famName = authState.familia?.nombre || 'Mi Familia';
   const isAdmin = USE_FIREBASE && authState.currentUser?.uid === authState.familia?.ownerId;
+  const perfil = authState.familia?.perfil || { hijos: [], mascotas: [], suenos: [] };
   const porM = {};
   S.miembros.forEach(m => { porM[m.id] = 0; });
   S.gastosVariables.forEach(g => {
@@ -1519,6 +1520,51 @@ function renderFamilia() {
 
     <div class="sec-divider"><div class="sec-title">Configuración</div></div>
     <div class="p14">
+
+      <!-- Vuestra familia -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t400);margin:4px 0 10px">Vuestra familia</div>
+
+      <!-- Hijos -->
+      <div class="card" style="margin:0 0 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700">👶 Hijos</div>
+          <button class="btn btn-cream btn-xs" data-action="add-hijo" style="font-size:18px;width:30px;height:30px;padding:0;border-radius:50%;line-height:1">+</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${(perfil.hijos||[]).length === 0
+            ? `<span style="font-size:12px;color:var(--t400);font-style:italic">Sin hijos añadidos</span>`
+            : (perfil.hijos||[]).map((h,i) => `<button class="btn btn-cream" data-action="edit-hijo" data-idx="${i}" style="border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600">${escH(h.nombre)} · ${Number(h.edad)===1?'1 año':`${escH(String(h.edad))} años`}</button>`).join('')
+          }
+        </div>
+      </div>
+
+      <!-- Mascotas -->
+      <div class="card" style="margin:0 0 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700">🐾 Mascotas</div>
+          <button class="btn btn-cream btn-xs" data-action="add-mascota" style="font-size:18px;width:30px;height:30px;padding:0;border-radius:50%;line-height:1">+</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${(perfil.mascotas||[]).length === 0
+            ? `<span style="font-size:12px;color:var(--t400);font-style:italic">Sin mascotas añadidas</span>`
+            : (perfil.mascotas||[]).map((m,i) => `<button class="btn btn-cream" data-action="edit-mascota" data-idx="${i}" style="border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600">${escH(m.nombre)} · ${escH(m.tipo)}</button>`).join('')
+          }
+        </div>
+      </div>
+
+      <!-- Sueños y proyectos -->
+      <div class="card" style="margin:0 0 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700">✨ Sueños y proyectos</div>
+          <button class="btn btn-cream btn-xs" data-action="add-sueno" style="font-size:18px;width:30px;height:30px;padding:0;border-radius:50%;line-height:1">+</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(perfil.suenos||[]).length === 0
+            ? `<span style="font-size:12px;color:var(--t400);font-style:italic">Sin sueños añadidos</span>`
+            : (perfil.suenos||[]).map((s,i) => `<button class="btn btn-cream" data-action="edit-sueno" data-idx="${i}" style="text-align:left;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:600;width:100%">${escH(s.texto)}</button>`).join('')
+          }
+        </div>
+      </div>
 
       <!-- Período del mes -->
       <div class="card" style="margin:0 0 10px">
@@ -2424,6 +2470,13 @@ document.addEventListener('click', e=>{
     }
     render(); scheduleSave(); return;
   }
+
+  if(act==='add-hijo')    { openEditHijo(null); return; }
+  if(act==='edit-hijo')   { openEditHijo(Number(btn.dataset.idx)); return; }
+  if(act==='add-mascota') { openEditMascota(null); return; }
+  if(act==='edit-mascota'){ openEditMascota(Number(btn.dataset.idx)); return; }
+  if(act==='add-sueno')   { openEditSueno(null); return; }
+  if(act==='edit-sueno')  { openEditSueno(Number(btn.dataset.idx)); return; }
 },{passive:true});
 
 // Coach send button (delegated — #coachSendBtn is recreated on each render)
@@ -2520,6 +2573,16 @@ function scheduleSave() {
   if(S.loading||UI.applyingRemote) return;
   if(UI.saveTimer) clearTimeout(UI.saveTimer);
   UI.saveTimer = setTimeout(saveNow, 800);
+}
+
+let _perfilSaveTimer = null;
+function schedulePerfilSave() {
+  if (_perfilSaveTimer) clearTimeout(_perfilSaveTimer);
+  _perfilSaveTimer = setTimeout(() => {
+    if (USE_FIREBASE && familiaDocRef && authState.familia) {
+      familiaDocRef.update({ perfil: authState.familia.perfil }).catch(console.error);
+    }
+  }, 1000);
 }
 
 async function saveNow() {
@@ -2782,6 +2845,7 @@ async function loadFamiliaAndStart(familiaId, uid) {
     }
     const famData = famSnap.data();
     authState.familia   = famData;
+    if (!authState.familia.perfil) authState.familia.perfil = { hijos: [], mascotas: [], suenos: [] };
     authState.familiaId = familiaId;
     const miembro = famData.miembros?.[uid];
     if (miembro) {
@@ -3317,6 +3381,227 @@ initAuth();
     closeAddPagoAplazado();
     renderTab('yo');
     schedulePersonalSave();
+  });
+</script>
+
+<!-- EDIT HIJO OVERLAY -->
+<div class="overlay" id="editHijoOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span id="editHijoTitle" style="font-size:17px;font-weight:700">Añadir hijo</span>
+      <button class="btn btn-cream btn-xs" id="closeEditHijo">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Nombre</label>
+      <input class="form-in" type="text" placeholder="ej: Bruno" id="inHijoNombre" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Edad (años)</label>
+      <input class="form-in" type="number" min="0" max="30" placeholder="0" id="inHijoEdad" style="font-size:20px;font-weight:700" />
+    </div>
+    <div class="form-sec" style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-cream btn-w100" id="delHijoBtn" style="border-radius:16px;padding:15px;color:var(--coral);display:none">Eliminar</button>
+      <button class="btn btn-green btn-w100" id="saveHijoBtn" style="border-radius:16px;padding:15px">Guardar →</button>
+    </div>
+  </div>
+</div>
+<script>
+  let _editHijoIdx = null;
+  function openEditHijo(idx) {
+    _editHijoIdx = (idx !== null && idx !== undefined) ? idx : null;
+    const perfil = authState.familia?.perfil || { hijos: [] };
+    const h = _editHijoIdx !== null ? (perfil.hijos||[])[_editHijoIdx] : null;
+    document.getElementById('editHijoTitle').textContent = h ? 'Editar hijo' : 'Añadir hijo';
+    document.getElementById('inHijoNombre').value = h?.nombre || '';
+    document.getElementById('inHijoEdad').value = h?.edad !== undefined ? h.edad : '';
+    document.getElementById('delHijoBtn').style.display = h ? '' : 'none';
+    document.getElementById('editHijoOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('inHijoNombre').focus(), 100);
+  }
+  function closeEditHijo() {
+    document.getElementById('editHijoOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('closeEditHijo').addEventListener('click', closeEditHijo);
+  document.getElementById('editHijoOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditHijo();
+  });
+  document.getElementById('saveHijoBtn').addEventListener('click', () => {
+    const nombre = document.getElementById('inHijoNombre').value.trim();
+    if (!nombre) { document.getElementById('inHijoNombre').style.borderColor = 'var(--coral)'; return; }
+    const edad = Number(document.getElementById('inHijoEdad').value || 0);
+    if (!authState.familia) return;
+    if (!authState.familia.perfil) authState.familia.perfil = { hijos: [], mascotas: [], suenos: [] };
+    const hijos = [...(authState.familia.perfil.hijos || [])];
+    if (_editHijoIdx !== null) {
+      hijos[_editHijoIdx] = { nombre, edad };
+    } else {
+      hijos.push({ nombre, edad });
+    }
+    authState.familia.perfil.hijos = hijos;
+    closeEditHijo();
+    renderTab('familia');
+    schedulePerfilSave();
+  });
+  document.getElementById('delHijoBtn').addEventListener('click', () => {
+    if (_editHijoIdx === null || !authState.familia) return;
+    const hijos = [...(authState.familia.perfil?.hijos || [])];
+    const h = hijos[_editHijoIdx];
+    if (!confirm(`¿Eliminar a ${h?.nombre || 'este hijo'}?`)) return;
+    hijos.splice(_editHijoIdx, 1);
+    authState.familia.perfil.hijos = hijos;
+    closeEditHijo();
+    renderTab('familia');
+    schedulePerfilSave();
+  });
+</script>
+
+<!-- EDIT MASCOTA OVERLAY -->
+<div class="overlay" id="editMascotaOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span id="editMascotaTitle" style="font-size:17px;font-weight:700">Añadir mascota</span>
+      <button class="btn btn-cream btn-xs" id="closeEditMascota">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Nombre</label>
+      <input class="form-in" type="text" placeholder="ej: Luna" id="inMascotaNombre" />
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Tipo</label>
+      <select class="form-in" id="inMascotaTipo" style="font-size:16px;font-weight:600">
+        <option value="Perro">🐶 Perro</option>
+        <option value="Gato">🐱 Gato</option>
+        <option value="Conejo">🐰 Conejo</option>
+        <option value="Pájaro">🐦 Pájaro</option>
+        <option value="Otro">🐾 Otro</option>
+      </select>
+    </div>
+    <div class="form-sec" style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-cream btn-w100" id="delMascotaBtn" style="border-radius:16px;padding:15px;color:var(--coral);display:none">Eliminar</button>
+      <button class="btn btn-green btn-w100" id="saveMascotaBtn" style="border-radius:16px;padding:15px">Guardar →</button>
+    </div>
+  </div>
+</div>
+<script>
+  let _editMascotaIdx = null;
+  function openEditMascota(idx) {
+    _editMascotaIdx = (idx !== null && idx !== undefined) ? idx : null;
+    const perfil = authState.familia?.perfil || { mascotas: [] };
+    const m = _editMascotaIdx !== null ? (perfil.mascotas||[])[_editMascotaIdx] : null;
+    document.getElementById('editMascotaTitle').textContent = m ? 'Editar mascota' : 'Añadir mascota';
+    document.getElementById('inMascotaNombre').value = m?.nombre || '';
+    document.getElementById('inMascotaTipo').value = m?.tipo || 'Perro';
+    document.getElementById('delMascotaBtn').style.display = m ? '' : 'none';
+    document.getElementById('editMascotaOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('inMascotaNombre').focus(), 100);
+  }
+  function closeEditMascota() {
+    document.getElementById('editMascotaOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('closeEditMascota').addEventListener('click', closeEditMascota);
+  document.getElementById('editMascotaOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditMascota();
+  });
+  document.getElementById('saveMascotaBtn').addEventListener('click', () => {
+    const nombre = document.getElementById('inMascotaNombre').value.trim();
+    if (!nombre) { document.getElementById('inMascotaNombre').style.borderColor = 'var(--coral)'; return; }
+    const tipo = document.getElementById('inMascotaTipo').value;
+    if (!authState.familia) return;
+    if (!authState.familia.perfil) authState.familia.perfil = { hijos: [], mascotas: [], suenos: [] };
+    const mascotas = [...(authState.familia.perfil.mascotas || [])];
+    if (_editMascotaIdx !== null) {
+      mascotas[_editMascotaIdx] = { nombre, tipo };
+    } else {
+      mascotas.push({ nombre, tipo });
+    }
+    authState.familia.perfil.mascotas = mascotas;
+    closeEditMascota();
+    renderTab('familia');
+    schedulePerfilSave();
+  });
+  document.getElementById('delMascotaBtn').addEventListener('click', () => {
+    if (_editMascotaIdx === null || !authState.familia) return;
+    const mascotas = [...(authState.familia.perfil?.mascotas || [])];
+    const m = mascotas[_editMascotaIdx];
+    if (!confirm(`¿Eliminar a ${m?.nombre || 'esta mascota'}?`)) return;
+    mascotas.splice(_editMascotaIdx, 1);
+    authState.familia.perfil.mascotas = mascotas;
+    closeEditMascota();
+    renderTab('familia');
+    schedulePerfilSave();
+  });
+</script>
+
+<!-- EDIT SUEÑO OVERLAY -->
+<div class="overlay" id="editSuenoOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span id="editSuenoTitle" style="font-size:17px;font-weight:700">Añadir sueño</span>
+      <button class="btn btn-cream btn-xs" id="closeEditSueno">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Describe vuestro sueño o proyecto</label>
+      <input class="form-in" type="text" placeholder="ej: Comprar casa en 5 años" id="inSuenoTexto" />
+    </div>
+    <div class="form-sec" style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-cream btn-w100" id="delSuenoBtn" style="border-radius:16px;padding:15px;color:var(--coral);display:none">Eliminar</button>
+      <button class="btn btn-green btn-w100" id="saveSuenoBtn" style="border-radius:16px;padding:15px">Guardar →</button>
+    </div>
+  </div>
+</div>
+<script>
+  let _editSuenoIdx = null;
+  function openEditSueno(idx) {
+    _editSuenoIdx = (idx !== null && idx !== undefined) ? idx : null;
+    const perfil = authState.familia?.perfil || { suenos: [] };
+    const s = _editSuenoIdx !== null ? (perfil.suenos||[])[_editSuenoIdx] : null;
+    document.getElementById('editSuenoTitle').textContent = s ? 'Editar sueño' : 'Añadir sueño';
+    document.getElementById('inSuenoTexto').value = s?.texto || '';
+    document.getElementById('delSuenoBtn').style.display = s ? '' : 'none';
+    document.getElementById('editSuenoOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('inSuenoTexto').focus(), 100);
+  }
+  function closeEditSueno() {
+    document.getElementById('editSuenoOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('closeEditSueno').addEventListener('click', closeEditSueno);
+  document.getElementById('editSuenoOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditSueno();
+  });
+  document.getElementById('saveSuenoBtn').addEventListener('click', () => {
+    const texto = document.getElementById('inSuenoTexto').value.trim();
+    if (!texto) { document.getElementById('inSuenoTexto').style.borderColor = 'var(--coral)'; return; }
+    if (!authState.familia) return;
+    if (!authState.familia.perfil) authState.familia.perfil = { hijos: [], mascotas: [], suenos: [] };
+    const suenos = [...(authState.familia.perfil.suenos || [])];
+    if (_editSuenoIdx !== null) {
+      suenos[_editSuenoIdx] = { texto };
+    } else {
+      suenos.push({ texto });
+    }
+    authState.familia.perfil.suenos = suenos;
+    closeEditSueno();
+    renderTab('familia');
+    schedulePerfilSave();
+  });
+  document.getElementById('delSuenoBtn').addEventListener('click', () => {
+    if (_editSuenoIdx === null || !authState.familia) return;
+    const suenos = [...(authState.familia.perfil?.suenos || [])];
+    if (!confirm('¿Eliminar este sueño?')) return;
+    suenos.splice(_editSuenoIdx, 1);
+    authState.familia.perfil.suenos = suenos;
+    closeEditSueno();
+    renderTab('familia');
+    schedulePerfilSave();
   });
 </script>
 </body>
