@@ -553,6 +553,9 @@ const MIEMBROS_DEFAULT = [
 const S = {
   mesActual: new Date().getMonth(),
   añoActual: new Date().getFullYear(),
+  saldoInicial: 0,
+  ingresosMensuales: 3350,
+  ingresosExtra: 0,
   ingresos: 3350,
   saldoAhorro: 0,
   miembros: MIEMBROS_DEFAULT.map(m=>({...m})),
@@ -680,6 +683,10 @@ function getBudget() {
     diasR, promDia, diaHoy:diasHoy, diasMes:diasTotal,
     gastSem,topeSem,pctSem,porCat, periodoInicio:inicio, periodoFin:fin,
     estado: dif>=0?'bien': dif>=-100?'ajustado':'peligro'};
+}
+
+function updateIngresos() {
+  S.ingresos = (Number(S.saldoInicial)||0) + (Number(S.ingresosMensuales)||0) + (Number(S.ingresosExtra)||0);
 }
 
 function weekRange() {
@@ -1669,12 +1676,23 @@ function renderFamilia() {
 
       <!-- Ingresos y ahorro -->
       <div class="card" style="margin:0 0 10px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Ingresos mensuales</div>
-        <input type="number" step="0.01" value="${S.ingresos}" data-field="ingresos"
-          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:18px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Ingresos este mes</div>
+        <div style="font-size:12px;color:var(--t500);margin-bottom:6px">📅 Saldo inicial del mes</div>
+        <input type="number" step="0.01" value="${S.saldoInicial}" data-field="saldoInicial"
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none;margin-bottom:10px" />
+        <div style="font-size:12px;color:var(--t500);margin-bottom:6px">💼 Aportación mensual</div>
+        <input type="number" step="0.01" value="${S.ingresosMensuales}" data-field="ingresosMensuales"
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none;margin-bottom:10px" />
+        <div style="font-size:12px;color:var(--t500);margin-bottom:6px">⭐ Ingresos extra este mes</div>
+        <input type="number" step="0.01" value="${S.ingresosExtra}" data-field="ingresosExtra"
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none;margin-bottom:10px" />
+        <div style="background:var(--cream2);border-radius:12px;padding:12px 14px;text-align:center">
+          <span style="font-size:13px;color:var(--t600)">Total disponible este mes: </span>
+          <span style="font-size:17px;font-weight:800;color:#2a9d5c">${fmt(S.ingresos)} €</span>
+        </div>
         <div style="font-size:12px;color:var(--t500);margin-top:10px;margin-bottom:6px">💰 Saldo cuenta de ahorro</div>
         <input type="number" step="0.01" value="${S.saldoAhorro}" data-field="saldoAhorro"
-          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:18px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
+          style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:16px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
       </div>
 
       <button class="btn btn-green btn-w100" style="border-radius:16px;margin-bottom:8px" data-action="cerrar-mes">
@@ -2567,12 +2585,16 @@ document.addEventListener('click', e=>{
     S.historico = { ...(S.historico || {}), [k]: {
       gastosVariables: S.gastosVariables,
       ingresos: Number(S.ingresos) || 0,
+      saldoInicial: Number(S.saldoInicial) || 0,
+      ingresosMensuales: Number(S.ingresosMensuales) || 0,
+      ingresosExtra: Number(S.ingresosExtra) || 0,
       gastosFijos: S.gastosFijos.map(g => ({...g})),
       totalGastosFijos: t.fijos,
       totalGastosVariables: t.vars
     }};
     S.gastosVariables = [];
     S.gastosFijos = S.gastosFijos.map(g => ({...g, pagado: false}));
+    S.saldoInicial = 0; S.ingresosMensuales = 0; S.ingresosExtra = 0; updateIngresos();
     let nuevoMes = S.mesActual + 1;
     let nuevoAño = S.añoActual;
     if (nuevoMes > 11) { nuevoMes = 0; nuevoAño++; }
@@ -2624,7 +2646,7 @@ document.addEventListener('input', e => {
 // ══════════════════════════════════════════════
 // FIELD PROTECTION (ingresos/saldoAhorro)
 // ══════════════════════════════════════════════
-const protectedFields=['ingresos','saldoAhorro','personal-ingresos','personal-aportacion','personal-ahorro'];
+const protectedFields=['saldoInicial','ingresosMensuales','ingresosExtra','saldoAhorro','personal-ingresos','personal-aportacion','personal-ahorro'];
 document.addEventListener('focusin', e=>{
   const f=e.target.dataset.field;
   if(protectedFields.includes(f) || (f && f.startsWith('fijo-'))){
@@ -2669,8 +2691,10 @@ document.addEventListener('focusout', e=>{
   if(f==='personal-aportacion'){ SP.aportacionComun=Number(e.target.value||0); UI.editingField=null; renderTab('yo'); schedulePersonalSave(); return; }
   if(f==='personal-ahorro')    { SP.ahorroPersonal =Number(e.target.value||0); UI.editingField=null; renderTab('yo'); schedulePersonalSave(); return; }
   if(protectedFields.includes(f)){
-    if(f==='ingresos')    S.ingresos=Number(e.target.value||0);
-    if(f==='saldoAhorro') S.saldoAhorro=Number(e.target.value||0);
+    if(f==='saldoInicial')      { S.saldoInicial=Number(e.target.value||0); updateIngresos(); }
+    if(f==='ingresosMensuales') { S.ingresosMensuales=Number(e.target.value||0); updateIngresos(); }
+    if(f==='ingresosExtra')     { S.ingresosExtra=Number(e.target.value||0); updateIngresos(); }
+    if(f==='saldoAhorro')       S.saldoAhorro=Number(e.target.value||0);
     UI.editingField=null;
     saveNow(); render();
   }
@@ -2700,6 +2724,9 @@ async function saveNow() {
   const hist = { ...(S.historico || {}), [k]: {
     gastosVariables: S.gastosVariables,
     ingresos: Number(S.ingresos) || 0,
+    saldoInicial: Number(S.saldoInicial) || 0,
+    ingresosMensuales: Number(S.ingresosMensuales) || 0,
+    ingresosExtra: Number(S.ingresosExtra) || 0,
     gastosFijos: S.gastosFijos.map(g => ({...g})),
     totalGastosFijos: t.fijos,
     totalGastosVariables: t.vars
@@ -2707,6 +2734,9 @@ async function saveNow() {
   S.historico = hist;
   const payload = {
     ingresos: Number(S.ingresos) || 0,
+    saldoInicial: Number(S.saldoInicial) || 0,
+    ingresosMensuales: Number(S.ingresosMensuales) || 0,
+    ingresosExtra: Number(S.ingresosExtra) || 0,
     gastosFijos: S.gastosFijos,
     saldoAhorro: Number(S.saldoAhorro) || 0,
     diaInicio: Number(S.diaInicio) || 1,
@@ -3160,7 +3190,10 @@ async function logout() {
 // REALTIME LISTENER
 // ══════════════════════════════════════════════
 function applyData(d) {
-  if(typeof d.ingresos==='number')    S.ingresos=d.ingresos;
+  if(typeof d.saldoInicial==='number')      S.saldoInicial=d.saldoInicial;
+  if(typeof d.ingresosMensuales==='number') S.ingresosMensuales=d.ingresosMensuales;
+  if(typeof d.ingresosExtra==='number')     S.ingresosExtra=d.ingresosExtra;
+  if(typeof d.ingresos==='number') S.ingresos=d.ingresos; else updateIngresos();
   if(typeof d.saldoAhorro==='number') S.saldoAhorro=d.saldoAhorro;
   if(typeof d.diaInicio==='number')   S.diaInicio=d.diaInicio;
   if(typeof d.diaFin==='number')      S.diaFin=d.diaFin;
