@@ -1195,7 +1195,7 @@ function renderHome() {
       <div class="flex-bc mb-10">
         <div>
           <div class="overline">ESTA SEMANA</div>
-          <div style="font-size:22px;font-weight:800;margin-top:3px">${fmt(b.gastSem)} € <span style="font-size:12px;font-weight:400;color:var(--t500)">de ${fmtI(b.topeSem)} €</span></div>
+          <div style="font-size:22px;font-weight:800;margin-top:3px">${fmt(b.gastSem)} € <span style="font-size:12px;font-weight:400;color:var(--t500)">de ${fmt(b.topeSem)} €</span></div>
         </div>
         <div class="badge ${b.pctSem>=100?'b-coral':b.pctSem>=80?'b-amber':'b-lime'}">${b.pctSem}%</div>
       </div>
@@ -1376,7 +1376,7 @@ function renderAnalisis() {
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--cream2)" stroke-width="20"/>
       ${segs}
       <text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="8" fill="var(--t500)">TOTAL</text>
-      <text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="11" font-weight="bold" fill="var(--t900)">${fmtI(b.vars)} €</text>
+      <text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="11" font-weight="bold" fill="var(--t900)">${fmt(b.vars)} €</text>
     </svg>`;
   }
 
@@ -1567,7 +1567,7 @@ function renderFamilia() {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           <div>
             <div style="font-size:10px;opacity:.65;margin-bottom:3px">Ingresos</div>
-            <div style="font-size:16px;font-weight:800">${fmtI(b.ing)} €</div>
+            <div style="font-size:16px;font-weight:800">${fmt(b.ing)} €</div>
           </div>
           <div>
             <div style="font-size:10px;opacity:.65;margin-bottom:3px">Gastado</div>
@@ -1677,6 +1677,9 @@ function renderFamilia() {
           style="width:100%;padding:11px 14px;background:var(--cream);border:1.5px solid var(--cream3);border-radius:12px;font-size:18px;font-weight:700;font-family:var(--font-b);color:var(--t900);outline:none" />
       </div>
 
+      <button class="btn btn-green btn-w100" style="border-radius:16px;margin-bottom:8px" data-action="cerrar-mes">
+        📅 Cerrar mes y empezar nuevo
+      </button>
       <button class="btn btn-cream btn-w100" style="border-radius:16px;margin-bottom:8px" data-action="open-historico">
         📊 Ver histórico de meses
       </button>
@@ -1713,6 +1716,7 @@ function renderYo() {
 
   const pt = getPersonalTotals();
   const { cuotas, gastosMes, saldo } = pt;
+  const enTuCuenta = (Number(SP.ingresosPropios) || 0) - (Number(SP.aportacionComun) || 0);
 
   const estadoBadge = saldo > 200
     ? { emoji: '🟢', label: 'Bien',     cls: 'b-lime' }
@@ -1802,10 +1806,14 @@ function renderYo() {
       <div style="position:absolute;bottom:-20px;right:30px;width:90px;height:90px;background:var(--g600);border-radius:50%;opacity:.35"></div>
       <div style="position:relative;z-index:1">
         <div class="overline-w mb-4">TUS FINANZAS · ${escH(authState.currentUser.nombre.toUpperCase())}</div>
-        <div style="font-family:var(--font-d);font-size:52px;font-weight:normal;line-height:1;letter-spacing:-2px;color:white;margin-bottom:8px">${fmt(saldo)} €</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="badge ${estadoBadge.cls}">${estadoBadge.emoji} ${estadoBadge.label}</div>
-          <div style="font-size:12px;opacity:.7;color:white">saldo disponible personal</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;opacity:.65;color:white;margin-bottom:3px">En tu cuenta</div>
+        <div style="font-family:var(--font-d);font-size:52px;font-weight:normal;line-height:1;letter-spacing:-2px;color:white;margin-bottom:12px">${fmt(enTuCuenta)} €</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;opacity:.65;color:white;margin-bottom:3px">Tras compromisos</div>
+            <div style="font-size:26px;font-weight:800;color:${saldo>=0?'var(--lime)':'var(--coral)'}">${fmt(saldo)} €</div>
+          </div>
+          <div class="badge ${estadoBadge.cls}" style="margin-bottom:4px">${estadoBadge.emoji} ${estadoBadge.label}</div>
         </div>
       </div>
     </div>
@@ -1815,11 +1823,11 @@ function renderYo() {
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div style="text-align:center">
           <div class="overline mb-4">Ingresos</div>
-          <div style="font-size:17px;font-weight:800;color:var(--t900)">${fmtI(SP.ingresosPropios)} €</div>
+          <div style="font-size:17px;font-weight:800;color:var(--t900)">${fmt(SP.ingresosPropios)} €</div>
         </div>
         <div style="text-align:center;border-left:1px solid var(--cream2);border-right:1px solid var(--cream2)">
           <div class="overline mb-4">Aportación</div>
-          <div style="font-size:17px;font-weight:800;color:var(--coral)">${fmtI(SP.aportacionComun)} €</div>
+          <div style="font-size:17px;font-weight:800;color:var(--coral)">${fmt(SP.aportacionComun)} €</div>
         </div>
         <div style="text-align:center">
           <div class="overline mb-4">Gastos mes</div>
@@ -2550,6 +2558,27 @@ document.addEventListener('click', e=>{
       DB.collection('users').doc(uid).update({ familiaId: null, shortId: null }).catch(console.error);
     }
     render(); scheduleSave(); return;
+  }
+
+  if(act==='cerrar-mes') {
+    if (!confirm('¿Cerrar el mes actual y empezar uno nuevo? Los gastos variables se resetearán y los fijos quedarán sin marcar.')) return;
+    const k = mesKey();
+    const t = getTotals();
+    S.historico = { ...(S.historico || {}), [k]: {
+      gastosVariables: S.gastosVariables,
+      ingresos: Number(S.ingresos) || 0,
+      gastosFijos: S.gastosFijos.map(g => ({...g})),
+      totalGastosFijos: t.fijos,
+      totalGastosVariables: t.vars
+    }};
+    S.gastosVariables = [];
+    S.gastosFijos = S.gastosFijos.map(g => ({...g, pagado: false}));
+    let nuevoMes = S.mesActual + 1;
+    let nuevoAño = S.añoActual;
+    if (nuevoMes > 11) { nuevoMes = 0; nuevoAño++; }
+    S.mesActual = nuevoMes;
+    S.añoActual = nuevoAño;
+    saveNow(); render(); return;
   }
 
   if(act==='add-hijo')    { openEditHijo(null); return; }
