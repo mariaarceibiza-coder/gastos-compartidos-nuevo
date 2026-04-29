@@ -2255,27 +2255,7 @@ function closeEditFijo() {
   document.body.style.overflow = '';
   _editFijoId = null;
 }
-document.getElementById('closeEditFijo').addEventListener('click', closeEditFijo);
-document.getElementById('editFijoOverlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeEditFijo();
-});
-document.getElementById('fijoIconoGrid').addEventListener('click', e => {
-  const btn = e.target.closest('[data-fijo-icono]');
-  if (!btn) return;
-  _editFijoIcono = btn.dataset.fijoIcono;
-  document.getElementById('fijoIconoGrid').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b === btn));
-});
-document.getElementById('saveEditFijoBtn').addEventListener('click', () => {
-  const nombre = document.getElementById('inFijoNombre').value.trim();
-  if (!nombre) { document.getElementById('inFijoNombre').style.borderColor = 'var(--coral)'; return; }
-  const presupuesto = Number(document.getElementById('inFijoPresupuesto').value || 0);
-  S.gastosFijos = S.gastosFijos.map(x =>
-    x.id === _editFijoId ? {...x, icono: _editFijoIcono, categoria: nombre, presupuesto} : x
-  );
-  closeEditFijo();
-  render();
-  scheduleSave();
-});
+// editFijo listeners are set up in a script block after the overlay HTML
 
 // ══════════════════════════════════════════════
 // EVENT DELEGATION
@@ -3150,6 +3130,30 @@ initAuth();
     </div>
   </div>
 </div>
+
+<script>
+  document.getElementById('closeEditFijo')?.addEventListener('click', closeEditFijo);
+  document.getElementById('editFijoOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditFijo();
+  });
+  document.getElementById('fijoIconoGrid')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-fijo-icono]');
+    if (!btn) return;
+    _editFijoIcono = btn.dataset.fijoIcono;
+    document.getElementById('fijoIconoGrid').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b === btn));
+  });
+  document.getElementById('saveEditFijoBtn')?.addEventListener('click', () => {
+    const nombre = document.getElementById('inFijoNombre').value.trim();
+    if (!nombre) { document.getElementById('inFijoNombre').style.borderColor = 'var(--coral)'; return; }
+    const presupuesto = Number(document.getElementById('inFijoPresupuesto').value || 0);
+    S.gastosFijos = S.gastosFijos.map(x =>
+      x.id === _editFijoId ? {...x, icono: _editFijoIcono, categoria: nombre, presupuesto} : x
+    );
+    closeEditFijo();
+    render();
+    scheduleSave();
+  });
+</script>
 
 <!-- ADD PENDIENTE COBRO OVERLAY -->
 <div class="overlay" id="addPendienteCobroOverlay">
