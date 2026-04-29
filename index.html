@@ -754,6 +754,7 @@ async function loadPersonalData() {
 // ══════════════════════════════════════════════
 // Estado del mensaje IA
 const aiMsg = { texto: null, cargando: false, error: false };
+const semanaMsg = { texto: null, cargando: false, error: false };
 
 const FUNCION_URL = 'https://getmensajecoach-6zh7ykkvea-ew.a.run.app';
 const FUNCION_URL_COACH = 'https://getmensajecoach-6zh7ykkvea-ew.a.run.app';
@@ -810,7 +811,7 @@ async function fetchMensajeIA(force = false) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ingresos: b.ing,
-        gastadoMes: b.gast,
+        gastadoMes: b.vars,
         gastadoSemana: b.gastSem,
         topeSemana: b.topeSem,
         diasRestantes: b.diasR,
@@ -860,8 +861,49 @@ async function fetchMensajeIA(force = false) {
   renderTab('hogar');
 }
 
+async function fetchSemanaMsg(force = false) {
+  if (semanaMsg.cargando) return;
+  if (!force) {
+    const cached = _cacheGet('semana');
+    if (cached) { semanaMsg.texto = cached; renderTab('hogar'); return; }
+  }
+  semanaMsg.cargando = true;
+  semanaMsg.error = false;
+  renderTab('hogar');
+  const b = getBudget();
+  try {
+    const res = await fetch(FUNCION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo: 'semana',
+        ingresos: b.ing,
+        gastadoMes: b.vars,
+        gastadoSemana: b.gastSem,
+        topeSemana: b.topeSem,
+        diasRestantes: b.diasR,
+        presupuestoVariables: b.presVars,
+        porcentajeSemana: b.pctSem,
+        nombresFamilia: S.miembros.map(m => m.nombre),
+        nombreFamilia: authState.familia?.nombre || '',
+        perfil: authState.familia?.perfil || {}
+      })
+    });
+    const data = await res.json();
+    semanaMsg.texto = data.mensaje || null;
+    if (semanaMsg.texto) _cacheSet('semana', semanaMsg.texto);
+    semanaMsg.error = !data.mensaje;
+  } catch(e) {
+    semanaMsg.error = true;
+    console.error('Error semana IA:', e);
+  }
+  semanaMsg.cargando = false;
+  renderTab('hogar');
+}
+
 // Pedir mensaje IA al arrancar (con delay para no bloquear)
 setTimeout(() => { if (!aiMsg.texto && !aiMsg.cargando) fetchMensajeIA(); }, 2000);
+setTimeout(() => { if (!semanaMsg.texto && !semanaMsg.cargando) fetchSemanaMsg(); }, 3000);
 
 // ══════════════════════════════════════════════
 // COACH IA — contexto y funciones
@@ -878,7 +920,7 @@ function buildCoachContext() {
   const fijosPend = S.gastosFijos.filter(g => !g.pagado);
   return {
     ingresos: b.ing,
-    gastadoMes: b.gast,
+    gastadoMes: b.vars,
     gastadoSemana: b.gastSem,
     topeSemana: b.topeSem,
     diasRestantes: b.diasR,
@@ -1069,16 +1111,6 @@ function renderHome() {
     : b.estado === 'ajustado' ? { emoji:'🟡', color:'var(--amber)', label:'Atento' }
     : { emoji:'🔴', color:'var(--coral)', label:'Cuidado' };
 
-  // Impacto de 30€ en metas
-  const meta1 = S.metas[0];
-  const impacto30 = meta1
-    ? `= ${Math.round(30 / ((meta1.objetivo - meta1.aportado) / 100) * 10) / 10}% de ${meta1.nombre}`
-    : null;
-
-  // Días de guardería que cuesta ese gasto
-  const guarderia = S.gastosFijos.find(g => g.categoria.toLowerCase().includes('guard'));
-  const costeDiaGuarderia = guarderia ? (guarderia.presupuesto / 22) : null;
-
   return `
     <div class="screen-header">
       <div class="flex-bc mb-8">
@@ -1175,14 +1207,12 @@ function renderHome() {
           ${b.pctSem>=100?'⚠️':'💡'}
           <span>Máximo <strong>${fmt(Math.max(0,(b.presVars-b.vars)/b.diasR))} €/día</strong> los próximos ${b.diasR} días</span>
         </div>
-        ${b.pctSem < 80 && costeDiaGuarderia ? `
+        ${semanaMsg.cargando ? `
+          <div style="margin-top:8px;height:10px;background:var(--cream2);border-radius:6px;animation:shimmer 1.5s ease-in-out infinite"></div>` : ''}
+        ${!semanaMsg.cargando && semanaMsg.texto ? `
           <div style="margin-top:8px;padding:10px 12px;background:var(--cream);border-radius:10px;font-size:12px;color:var(--t700)">
-            💚 Vas bien. Cada ${fmt(costeDiaGuarderia.toFixed(0))} € que ahorráis = 1 día de guardería de Bruno
-          </div>` : ''}
-        ${b.pctSem >= 80 && impacto30 ? `
-          <div style="margin-top:8px;padding:10px 12px;background:#FFF8E8;border-radius:10px;font-size:12px;color:var(--t700);border-left:3px solid var(--amber)">
-            💡 Esa pizza del finde (30 €) ${impacto30}
-          </div>` : ''}` 
+            💡 ${escH(semanaMsg.texto)}
+          </div>` : ''}`
       : `<div style="font-size:12px;color:var(--t500)">Semana completada</div>`}
     </div>
 
