@@ -243,7 +243,6 @@
     .cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; padding:0 14px; margin-bottom:16px; }
     .cat-btn { background:var(--white); border:2px solid transparent; border-radius:13px; padding:11px 5px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; transition:all .15s; }
     .cat-btn:active { transform:scale(.93); }
-    .cat-btn.sel { background:var(--g600); border-color:var(--g600); }
     .cat-btn.sel .cat-lbl { color:white; }
     .cat-ico { font-size:21px; }
     .cat-lbl { font-size:10px; font-weight:600; color:var(--t500); }
@@ -953,6 +952,24 @@ const CATS = [
   {id:'cole',  icon:'🎒', label:'Cole'},
   {id:'otros', icon:'✨', label:'Otros'}
 ];
+
+const CAT_ICONS = {
+  super: { bg:'#FFF3E0', color:'#E65100', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><path d="M3 6h16l-1.5 10a2 2 0 01-2 1.8H6.5a2 2 0 01-2-1.8L3 6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M1 6h20M9 6V4a2 2 0 014 0v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>` },
+  hogar: { bg:'#FFF8E1', color:'#F57F17', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><path d="M3 10.5L11 3L19 10.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 20V13h6v7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>` },
+  coche: { bg:'#E3F2FD', color:'#1565C0', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><path d="M5 10l1.5-4h9L17 10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="10" width="18" height="7" rx="2" stroke="currentColor" stroke-width="1.7"/><circle cx="6.5" cy="17" r="2" stroke="currentColor" stroke-width="1.7"/><circle cx="15.5" cy="17" r="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 13h18" stroke="currentColor" stroke-width="1.7"/></svg>` },
+  ocio:  { bg:'#F3E5F5', color:'#6A1B9A', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M8 9c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="11" cy="15.5" r="1" fill="currentColor"/></svg>` },
+  comer: { bg:'#E8F5E9', color:'#2E7D32', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><path d="M8 3v4a4 4 0 008 0V3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 7v12M5 3v16M5 9c0 2 1.5 3 3 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>` },
+  salud: { bg:'#FCE4EC', color:'#C2185B', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><path d="M11 3C7 3 4 6 4 9.5c0 5 7 9.5 7 9.5s7-4.5 7-9.5C18 6 15 3 11 3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M11 8v6M8 11h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>` },
+  cole:  { bg:'#E8EAF6', color:'#283593', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><path d="M11 3L2 8l9 5 9-5-9-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M2 8v6M11 13v6M20 8v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M5 9.5v4a6 6 0 0012 0v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>` },
+  otros: { bg:'#ECEFF1', color:'#546E7A', svg:`<svg width="18" height="18" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="1.5" fill="currentColor"/><circle cx="5" cy="11" r="1.5" fill="currentColor"/><circle cx="17" cy="11" r="1.5" fill="currentColor"/></svg>` }
+};
+
+function catIcon(catId, size=36, sel=false) {
+  const ci = CAT_ICONS[catId] || CAT_ICONS.otros;
+  const bg = sel ? 'rgba(255,255,255,.22)' : ci.bg;
+  const color = sel ? 'white' : ci.color;
+  return `<div style="width:${size}px;height:${size}px;border-radius:${Math.round(size*0.28)}px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${color}">${ci.svg}</div>`;
+}
 
 const ICONOS_FIJOS = [
   '🏠','💡','💧','🔥','📱','🌐','🚗','🅿️',
@@ -1708,7 +1725,7 @@ function renderHome() {
       </div>
       <div class="p14 mb-8">
         ${recientes.slice(0,3).map(g=>`<div class="tx-item">
-          <div class="tx-ico">${cat(g.categoria).icon}</div>
+          ${catIcon(g.categoria)}
           <div style="flex:1">
             <div class="tx-name">${escH(g.descripcion||cat(g.categoria).label)}</div>
             <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha||'')}</div>
@@ -1876,7 +1893,7 @@ function renderAnalisis() {
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Por categoría</div>
         ${catBk.map((c,i)=>`
           <div class="bk-item">
-            <div class="bk-ico">${c.icon}</div>
+            ${catIcon(c.id, 34)}
             <div class="bk-info">
               <div class="flex-bc mb-4">
                 <span class="bk-name">${c.label}</span>
@@ -2469,7 +2486,7 @@ function renderGastos() {
       ${S.gastosFijos.map(g=>`
         <div class="fijo-item ${g.pagado?'paid':''}">
           <div class="check-ring ${g.pagado?'on':''}" data-action="toggle-pagado" data-id="${g.id}">${g.pagado?'✓':''}</div>
-          <div style="background:var(--cream);border-radius:10px;width:36px;height:36px;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center">${g.icono||'💳'}</div>
+          ${g.icono ? `<div style="background:var(--cream);border-radius:10px;width:36px;height:36px;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center">${g.icono}</div>` : catIcon('hogar')}
           <div style="flex:1;min-width:0">
             <div style="font-size:14px;font-weight:600;${g.pagado?'text-decoration:line-through;color:var(--t300)':'color:var(--t900)'}">${escH(g.categoria)}</div>
           </div>
@@ -2491,7 +2508,7 @@ function renderGastos() {
     <div class="p14">
       ${todos.length>0 ? todos.map(g=>`
         <div class="tx-item">
-          <div class="tx-ico">${cat(g.categoria).icon}</div>
+          ${catIcon(g.categoria)}
           <div style="flex:1">
             <div class="tx-name">${escH(g.descripcion||cat(g.categoria).label)}</div>
             <div class="tx-meta">${cat(g.categoria).label} · ${escH(g.fecha||'')}</div>
@@ -2565,11 +2582,15 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 function renderCatGrid() {
   const g = document.getElementById('catGrid');
   if(!g) return;
-  g.innerHTML = CATS.map(c=>`
-    <button class="cat-btn ${UI.selCat===c.id?'sel':''}" data-cat="${c.id}">
-      <span class="cat-ico">${c.icon}</span>
+  g.innerHTML = CATS.map(c=>{
+    const isSel = UI.selCat===c.id;
+    const ci = CAT_ICONS[c.id]||CAT_ICONS.otros;
+    const btnStyle = isSel ? `background:${ci.color};border-color:${ci.color}` : '';
+    return `<button class="cat-btn${isSel?' sel':''}" data-cat="${c.id}" style="${btnStyle}">
+      ${catIcon(c.id, 36, isSel)}
       <span class="cat-lbl">${c.label}</span>
-    </button>`).join('');
+    </button>`;
+  }).join('');
 }
 
 function openAdd() {
