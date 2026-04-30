@@ -61,11 +61,20 @@
       height:calc(58px + var(--safe-b)); padding-bottom:var(--safe-b);
       z-index:100; box-shadow:0 -4px 24px rgba(0,0,0,0.07);
     }
-    .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border:none; background:transparent; cursor:pointer; padding:6px 0; }
-    .nav-icon { font-size:17px; line-height:1; transition:transform .15s; }
-    .nav-label { font-size:9px; font-weight:500; color:var(--t300); transition:color .15s; letter-spacing:.01em; }
-    .nav-btn.active .nav-label { color:var(--g600); font-weight:700; }
-    .nav-btn.active .nav-icon { transform:scale(1.1); }
+    .nav-btn {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; gap:4px; padding:6px 2px;
+      border:none; background:none; cursor:pointer;
+      border-radius:14px; transition:background .15s;
+    }
+    .nav-btn.active { background:#E8F5EE; }
+    .nav-btn.active svg { color:#246B3E; }
+    .nav-btn:not(.active) svg { color:#C8C4BC; }
+    .nav-label {
+      font-size:9px; font-weight:600;
+    }
+    .nav-btn.active .nav-label { color:#246B3E; }
+    .nav-btn:not(.active) .nav-label { color:#C8C4BC; }
 
     /* ─── CARDS ─── */
     .card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; margin:0 14px 10px; }
@@ -739,25 +748,32 @@
 
   <nav class="bottom-nav">
     <button class="nav-btn active" data-tab="hogar">
-      <span class="nav-icon">🏠</span><span class="nav-label">Hogar</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M3 10.5L11 3L19 10.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 20V13h6v7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      <span class="nav-label">Hogar</span>
     </button>
     <button class="nav-btn" data-tab="gastos">
-      <span class="nav-icon">💸</span><span class="nav-label">Gastos</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><rect x="2" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 10h18" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="14.5" r="1.2" fill="currentColor"/><path d="M6 3h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="nav-label">Gastos</span>
     </button>
     <button class="nav-btn" data-tab="coach">
-      <span class="nav-icon">🌱</span><span class="nav-label">Coach</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M11 19C11 19 4 15 4 9a7 7 0 0114 0c0 2.5-1.5 4.5-3 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M11 19V12M11 15C11 15 8.5 13 7 11M11 13C11 13 13.5 11.5 15 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="nav-label">Coach</span>
     </button>
     <button class="nav-btn" data-tab="analisis">
-      <span class="nav-icon">📊</span><span class="nav-label">Análisis</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M3 17h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="5" y="11" width="3" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="10" y="7" width="3" height="10" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="15" y="4" width="3" height="13" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span class="nav-label">Análisis</span>
     </button>
     <button class="nav-btn" data-tab="metas">
-      <span class="nav-icon">✨</span><span class="nav-label">Metas</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.6"/><circle cx="11" cy="11" r="4" stroke="currentColor" stroke-width="1.6"/><circle cx="11" cy="11" r="1.5" fill="currentColor"/></svg>
+      <span class="nav-label">Metas</span>
     </button>
     <button class="nav-btn" data-tab="yo">
-      <span class="nav-icon">👤</span><span class="nav-label">Yo</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="nav-label">Yo</span>
     </button>
     <button class="nav-btn" data-tab="familia">
-      <span class="nav-icon">👨‍👩‍👧‍👦</span><span class="nav-label">Familia</span>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M2 19c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16.5" cy="7.5" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M14.5 19c0-2.5 1-4.5 3.5-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="nav-label">Familia</span>
     </button>
   </nav>
 </div>
