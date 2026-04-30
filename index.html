@@ -1912,7 +1912,7 @@ function renderAnalisis() {
       ${S.gastosFijos.length===0?`<div class="empty">Sin gastos fijos</div>`:`
         ${S.gastosFijos.map(g=>`
           <div class="bk-item">
-            <div class="bk-ico">${g.icono||'💳'}</div>
+            ${catIcon(CAT_ICONS[g.icono] ? g.icono : 'hogar', 34)}
             <div class="bk-info">
               <div class="flex-bc">
                 <span class="bk-name" style="${g.pagado?'text-decoration:line-through;color:var(--t300)':''}">${escH(g.categoria)}</span>
@@ -2486,7 +2486,7 @@ function renderGastos() {
       ${S.gastosFijos.map(g=>`
         <div class="fijo-item ${g.pagado?'paid':''}">
           <div class="check-ring ${g.pagado?'on':''}" data-action="toggle-pagado" data-id="${g.id}">${g.pagado?'✓':''}</div>
-          ${g.icono ? `<div style="background:var(--cream);border-radius:10px;width:36px;height:36px;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center">${g.icono}</div>` : catIcon('hogar')}
+          ${catIcon(CAT_ICONS[g.icono] ? g.icono : 'hogar')}
           <div style="flex:1;min-width:0">
             <div style="font-size:14px;font-weight:600;${g.pagado?'text-decoration:line-through;color:var(--t300)':'color:var(--t900)'}">${escH(g.categoria)}</div>
           </div>
@@ -2954,16 +2954,28 @@ document.getElementById('delEditMetaPersonalBtn').addEventListener('click', () =
 // EDITAR GASTO FIJO
 // ══════════════════════════════════════════════
 let _editFijoId = null;
-let _editFijoIcono = ICONOS_FIJOS[0];
+let _editFijoIcono = 'hogar';
+
+function renderFijoIconGrid() {
+  const grid = document.getElementById('fijoIconoGrid');
+  if (!grid) return;
+  grid.innerHTML = CATS.map(c => {
+    const isSel = _editFijoIcono === c.id;
+    const ci = CAT_ICONS[c.id] || CAT_ICONS.otros;
+    const btnStyle = isSel ? `background:${ci.color};border-color:${ci.color}` : '';
+    return `<button class="cat-btn${isSel?' sel':''}" data-fijo-icono="${c.id}" style="${btnStyle}">
+      ${catIcon(c.id, 36, isSel)}
+      <span class="cat-lbl">${c.label}</span>
+    </button>`;
+  }).join('');
+}
 
 function openEditFijo(id) {
   _editFijoId = id;
   const g = S.gastosFijos.find(x => x.id === id);
-  _editFijoIcono = g?.icono || '💳';
-  const grid = document.getElementById('fijoIconoGrid');
-  grid.innerHTML = ICONOS_FIJOS.map(e =>
-    `<button class="emoji-btn${e===_editFijoIcono?' selected':''}" data-fijo-icono="${e}">${e}</button>`
-  ).join('');
+  const raw = g?.icono || 'hogar';
+  _editFijoIcono = CAT_ICONS[raw] ? raw : 'hogar';
+  renderFijoIconGrid();
   document.getElementById('inFijoNombre').value = g?.categoria || '';
   document.getElementById('inFijoPresupuesto').value = g?.presupuesto || '';
   document.getElementById('inFijoNombre').style.borderColor = '';
@@ -3037,7 +3049,7 @@ document.addEventListener('click', e=>{
   }
   if(act==='add-fijo') {
     const newId=Math.max(0,...S.gastosFijos.map(g=>g.id))+1;
-    S.gastosFijos.push({id:newId,categoria:'Nuevo gasto',presupuesto:0,pagado:false,icono:'💳'});
+    S.gastosFijos.push({id:newId,categoria:'Nuevo gasto',presupuesto:0,pagado:false,icono:'hogar'});
     render(); scheduleSave(); return;
   }
   if(act==='add-meta')  { openEditMetaSheet(null); return; }
@@ -3890,7 +3902,7 @@ initAuth();
     </div>
     <div class="form-sec">
       <label class="form-lbl">Icono</label>
-      <div class="emoji-grid" id="fijoIconoGrid"></div>
+      <div class="cat-grid" id="fijoIconoGrid" style="padding:0;margin-bottom:0"></div>
     </div>
     <div class="form-sec">
       <label class="form-lbl">Nombre</label>
@@ -3915,7 +3927,7 @@ initAuth();
     const btn = e.target.closest('[data-fijo-icono]');
     if (!btn) return;
     _editFijoIcono = btn.dataset.fijoIcono;
-    document.getElementById('fijoIconoGrid').querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b === btn));
+    renderFijoIconGrid();
   });
   document.getElementById('saveEditFijoBtn')?.addEventListener('click', () => {
     const nombre = document.getElementById('inFijoNombre').value.trim();
