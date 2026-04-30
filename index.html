@@ -1925,6 +1925,38 @@ function renderYo() {
       ${coachBlock}
     </div>
 
+    <!-- METAS PERSONALES -->
+    <div class="sec-divider"><div class="sec-title">Mis metas</div></div>
+    <div class="p14">
+      ${SP.metasPersonales.map(m=>{
+        const p=pct(m.aportado,m.objetivo);
+        const on=p>=40;
+        return `<div class="goal-item">
+          <div class="flex-bc mb-12">
+            <div class="flex-c gap-10">
+              <div style="font-size:28px;width:44px;height:44px;background:var(--cream);border-radius:12px;display:flex;align-items:center;justify-content:center">${m.icono}</div>
+              <div>
+                <div style="font-size:15px;font-weight:700">${escH(m.nombre)}</div>
+                <div style="font-size:12px;color:var(--t500)">${fmt(m.aportado)} € de ${fmt(m.objetivo)} €</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="goal-pct ${on?'on':'off'}">${p}%</div>
+              <button class="btn btn-cream btn-xs" data-action="edit-meta-personal" data-id="${m.id}" style="padding:5px 9px;font-size:13px" title="Editar meta">✏️</button>
+            </div>
+          </div>
+          <div class="track"><div class="fill ${on?'fill-lime':'fill-coral'}" style="width:${Math.min(p,100)}%"></div></div>
+          <div class="flex-bc" style="margin-top:8px">
+            <span style="font-size:12px;color:var(--t300)">Faltan ${fmt(Math.max(0,m.objetivo-m.aportado))} €</span>
+            <button class="btn-ghost btn-xs" data-action="aportar-meta-personal" data-id="${m.id}">+ aportar →</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:16px" data-action="add-meta-personal">
+        + Nueva meta
+      </button>
+    </div>
+
     <!-- PAGOS APLAZADOS -->
     <div class="sec-divider">
       <div class="sec-title">Pagos aplazados</div>
@@ -2001,38 +2033,6 @@ function renderYo() {
               <button class="btn" style="background:transparent;padding:4px;font-size:15px;color:var(--t300)" data-action="del-gasto-personal" data-id="${g.id}">🗑</button>
             </div>`).join('')
         : '<div class="empty">Sin gastos personales este mes</div>'}
-    </div>
-
-    <!-- METAS PERSONALES -->
-    <div class="sec-divider"><div class="sec-title">Mis metas</div></div>
-    <div class="p14">
-      ${SP.metasPersonales.map(m=>{
-        const p=pct(m.aportado,m.objetivo);
-        const on=p>=40;
-        return `<div class="goal-item">
-          <div class="flex-bc mb-12">
-            <div class="flex-c gap-10">
-              <div style="font-size:28px;width:44px;height:44px;background:var(--cream);border-radius:12px;display:flex;align-items:center;justify-content:center">${m.icono}</div>
-              <div>
-                <div style="font-size:15px;font-weight:700">${escH(m.nombre)}</div>
-                <div style="font-size:12px;color:var(--t500)">${fmt(m.aportado)} € de ${fmt(m.objetivo)} €</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <div class="goal-pct ${on?'on':'off'}">${p}%</div>
-              <button class="btn btn-cream btn-xs" data-action="edit-meta-personal" data-id="${m.id}" style="padding:5px 9px;font-size:13px" title="Editar meta">✏️</button>
-            </div>
-          </div>
-          <div class="track"><div class="fill ${on?'fill-lime':'fill-coral'}" style="width:${Math.min(p,100)}%"></div></div>
-          <div class="flex-bc" style="margin-top:8px">
-            <span style="font-size:12px;color:var(--t300)">Faltan ${fmt(Math.max(0,m.objetivo-m.aportado))} €</span>
-            <button class="btn-ghost btn-xs" data-action="aportar-meta-personal" data-id="${m.id}">+ aportar →</button>
-          </div>
-        </div>`;
-      }).join('')}
-      <button class="btn btn-cream btn-w100" style="border-radius:16px;border:2px dashed var(--cream3);margin-bottom:16px" data-action="add-meta-personal">
-        + Nueva meta
-      </button>
     </div>
 
     <!-- AHORRO PERSONAL -->
