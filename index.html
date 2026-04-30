@@ -6,6 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Hogar · Gastos Familiares</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" crossorigin="anonymous"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
@@ -260,52 +261,285 @@
     .err-box { background:#FEF2F2; color:#7F1D1D; padding:14px; border-radius:12px; margin:14px; font-size:11px; font-family:monospace; white-space:pre-wrap; }
     @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.9} }
 
-    /* ─── LOGIN SCREEN ─── */
+    /* ─── LOGIN NUEVO ─── */
     .login-screen {
-      position:fixed; inset:0; background:var(--cream); z-index:500;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:24px; transition:opacity .3s ease; overflow-y:auto;
+      position: fixed; inset: 0; z-index: 500;
+      display: flex; flex-direction: column;
+      background: #f5efe4;
+      overflow-y: auto;
+      transition: opacity .3s ease;
     }
-    .login-screen.fade { opacity:0; pointer-events:none; }
-    .login-logo { font-size:42px; margin-bottom:10px; }
-    .login-title { font-family:var(--font-d); font-size:32px; color:var(--t900); margin-bottom:12px; }
-    .login-sub { font-size:13px; color:var(--t500); text-align:center; }
-    .login-step { display:none; }
-    .login-step.active { display:flex; flex-direction:column; align-items:center; width:100%; }
-    .login-form { width:100%; max-width:320px; display:flex; flex-direction:column; align-items:stretch; }
-    .login-input {
-      width:100%; padding:13px 16px; margin-bottom:10px;
-      background:var(--white); border:1.5px solid var(--cream3);
-      border-radius:14px; font-size:15px; font-family:var(--font-b);
-      color:var(--t900); outline:none; transition:border-color .15s;
+    .login-screen.fade { opacity: 0; pointer-events: none; }
+
+    .ls-hero {
+      background: #0a5e3e;
+      padding: calc(env(safe-area-inset-top, 0px) + 28px) 24px 36px;
+      border-radius: 0 0 36px 36px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
     }
-    .login-input:focus { border-color:var(--g600); }
-    .login-input::placeholder { color:var(--t300); }
-    .login-btn {
-      width:100%; padding:14px; margin-top:4px; margin-bottom:10px;
-      background:var(--g600); color:white; border:none;
-      border-radius:14px; font-size:15px; font-weight:700;
-      font-family:var(--font-b); cursor:pointer; transition:background .15s;
+    .ls-hero-deco {
+      position: absolute; inset: 0;
+      pointer-events: none; overflow: hidden;
     }
-    .login-btn:active { background:var(--g700); transform:scale(.98); }
-    .login-btn:disabled { opacity:.55; cursor:not-allowed; }
-    .login-link-btn {
-      width:100%; background:none; border:none; padding:8px;
-      font-size:13px; color:var(--g600); font-weight:600;
-      font-family:var(--font-b); cursor:pointer; text-align:center;
+    .ls-leaf {
+      position: absolute;
+      animation: ls-floaty 9s ease-in-out infinite;
     }
-    .login-link-btn.muted { color:var(--t500); font-weight:400; }
-    .login-error { color:var(--coral); font-size:13px; text-align:center; min-height:18px; margin-bottom:4px; }
-    .color-picker { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
-    .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .15s; }
-    .color-swatch.selected { border-color:var(--t900); transform:scale(1.15); }
-    .invite-banner {
-      background:var(--g800); color:white; border-radius:16px;
-      padding:12px 16px; margin-bottom:18px; text-align:center;
-      width:100%; max-width:320px;
+    .ls-leaf-1 { top: -20px; right: 20px; animation-delay: 0s; }
+    .ls-leaf-2 { top: 30px; right: -10px; animation-delay: -3s; }
+    .ls-leaf-3 { bottom: 10px; right: 40px; animation-delay: -6s; }
+    .ls-blob {
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      background: #d4f56b;
+      border-radius: 50%;
+      opacity: .12;
+      filter: blur(40px);
     }
-    .invite-banner-title { font-size:14px; font-weight:700; margin-bottom:3px; }
-    .invite-banner-sub { font-size:12px; opacity:.7; }
+    @keyframes ls-floaty {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(2deg); }
+    }
+    .ls-brand {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 18px; position: relative; z-index: 1;
+    }
+    .ls-brand-box {
+      width: 38px; height: 38px;
+      background: #d4f56b;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 18px rgba(212,245,107,.30);
+      flex-shrink: 0;
+    }
+    .ls-brand-name {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 22px; color: white;
+      letter-spacing: -.3px;
+    }
+    .ls-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(212,245,107,.18);
+      color: #e8ff8a;
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .4px;
+      margin-bottom: 18px;
+      position: relative; z-index: 1;
+    }
+    .ls-pulse {
+      width: 5px; height: 5px;
+      background: #d4f56b;
+      border-radius: 50%;
+      animation: ls-ping 2s ease-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes ls-ping {
+      0% { box-shadow: 0 0 0 0 rgba(212,245,107,.8); }
+      70% { box-shadow: 0 0 0 6px rgba(212,245,107,0); }
+      100% { box-shadow: 0 0 0 0 rgba(212,245,107,0); }
+    }
+    .ls-h1 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 38px; font-weight: 400;
+      line-height: 1.05; letter-spacing: -1px;
+      color: white; margin-bottom: 10px;
+      position: relative; z-index: 1;
+    }
+    .ls-h1 em { font-style: italic; color: #d4f56b; }
+    .ls-sub {
+      font-size: 14px; color: rgba(255,255,255,.78);
+      line-height: 1.5; max-width: 300px;
+      position: relative; z-index: 1;
+    }
+    .ls-form-wrap {
+      padding: 28px 24px calc(env(safe-area-inset-bottom, 0px) + 32px);
+      display: flex; flex-direction: column;
+      max-width: 420px; width: 100%; margin: 0 auto;
+      animation: ls-rise .7s cubic-bezier(.2,.8,.2,1) both;
+    }
+    @keyframes ls-rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .ls-invite-banner {
+      background: #0a5e3e; color: white;
+      border-radius: 16px; padding: 12px 16px;
+      margin-bottom: 18px; text-align: center;
+      display: none;
+    }
+    .ls-invite-banner.show { display: block; }
+    .ls-invite-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .ls-invite-sub { font-size: 12px; opacity: .7; }
+    .ls-form-eyebrow {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: #888; margin-bottom: 8px;
+    }
+    .ls-h2 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 34px; font-weight: 400;
+      color: #053722; margin-bottom: 10px;
+      line-height: 1.1;
+    }
+    .ls-h2-highlight {
+      position: relative; display: inline-block;
+    }
+    .ls-h2-highlight::after {
+      content: '';
+      position: absolute;
+      left: -2px; right: -2px;
+      bottom: 2px;
+      height: .32em;
+      background: #d4f56b;
+      border-radius: 6px;
+      transform: skewX(-3deg) scaleX(0);
+      transform-origin: left;
+      z-index: -1;
+      animation: ls-highlight 1s cubic-bezier(.65,0,.35,1) .4s forwards;
+    }
+    @keyframes ls-highlight {
+      to { transform: skewX(-3deg) scaleX(1); }
+    }
+    .ls-motivation {
+      font-size: 14px; line-height: 1.5;
+      color: #555; margin-bottom: 22px;
+    }
+    .ls-motivation strong {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 15px; color: #0a5e3e;
+      position: relative; display: inline-block;
+    }
+    .ls-motivation strong::after {
+      content: '';
+      position: absolute;
+      left: -1px; right: -1px; bottom: 1px;
+      height: .28em;
+      background: rgba(212,245,107,.85);
+      border-radius: 4px;
+      transform: skewX(-3deg);
+      z-index: -1;
+    }
+    .ls-input-wrap { position: relative; margin-bottom: 12px; }
+    .ls-input {
+      width: 100%;
+      padding: 16px 46px 16px 16px;
+      background: #faf6f0;
+      border: 1.5px solid #e0d9c8;
+      border-radius: 16px;
+      font-size: 15px;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      color: #1a1a1a;
+      outline: none;
+      transition: border-color .18s, box-shadow .18s, background .18s;
+      box-sizing: border-box;
+    }
+    .ls-input::placeholder { color: #bbb; }
+    .ls-input:focus {
+      border-color: #0a5e3e;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(10,94,62,.10);
+    }
+    .ls-input-icon {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: #888; pointer-events: none;
+      display: flex; align-items: center;
+    }
+    .ls-toggle-pw {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 12px; font-weight: 600;
+      color: #0a5e3e; padding: 6px 8px;
+      border-radius: 8px;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    }
+    .ls-input.pw { padding-right: 72px; }
+    .ls-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap; gap: 8px;
+      margin-bottom: 18px;
+    }
+    .ls-remember {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; font-size: 13px; color: #555;
+    }
+    .ls-checkbox {
+      width: 18px; height: 18px;
+      border: 1.5px solid #e0d9c8;
+      border-radius: 6px; background: #faf6f0;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all .15s;
+    }
+    .ls-checkbox.checked { background: #0a5e3e; border-color: #0a5e3e; }
+    .ls-forgot {
+      background: none; border: none;
+      font-size: 13px; font-weight: 600;
+      color: #0a5e3e; cursor: pointer;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    }
+    .ls-btn {
+      width: 100%; padding: 16px;
+      background: #0a5e3e; color: white;
+      border: none; border-radius: 16px;
+      font-size: 15px; font-weight: 600;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(10,94,62,.20);
+      transition: background .18s, transform .18s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-bottom: 16px;
+    }
+    .ls-btn:active { background: #084a31; transform: scale(.98); }
+    .ls-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .ls-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px; color: #bbb; font-size: 12px;
+    }
+    .ls-divider::before, .ls-divider::after {
+      content: ''; flex: 1;
+      height: 1px; background: #e0d9c8;
+    }
+    .ls-alt {
+      background: none; border: none;
+      font-size: 14px; font-weight: 700;
+      color: #0a5e3e; cursor: pointer;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      text-align: center; width: 100%;
+      margin-bottom: 20px; padding: 6px;
+    }
+    .ls-alt-muted {
+      font-weight: 400; color: #888;
+      font-size: 13px; margin-bottom: 8px;
+    }
+    .ls-footer { text-align: center; font-size: 11px; color: #aaa; }
+    .ls-footer span { color: #ff6b4a; }
+    .ls-error {
+      color: #E85B4B; font-size: 13px;
+      text-align: center; min-height: 18px;
+      margin-bottom: 6px;
+    }
+    .ls-step { display: none; width: 100%; }
+    .ls-step.active { display: flex; flex-direction: column; }
+    .ls-colors {
+      display: flex; gap: 10px;
+      justify-content: center; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .ls-color-swatch {
+      width: 30px; height: 30px; border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: all .15s;
+    }
+    .ls-color-swatch.selected { border-color: #053722; transform: scale(1.15); }
 
   </style>
 </head>
@@ -314,49 +548,175 @@
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen" style="display:none">
-  <div class="login-logo">🌿</div>
-  <div class="login-title">Hogar</div>
 
-  <div class="invite-banner" id="inviteBanner" style="display:none">
-    <div class="invite-banner-title" id="inviteBannerTitle">Te han invitado</div>
-    <div class="invite-banner-sub">Entra o crea tu cuenta para unirte</div>
-  </div>
-
-  <!-- Paso 1: Login -->
-  <div class="login-step active" id="loginStep1">
-    <div class="login-sub" style="margin-bottom:24px">Bienvenido de nuevo</div>
-    <div class="login-form">
-      <input class="login-input" type="email" id="loginEmail" placeholder="Tu email" autocomplete="email" />
-      <input class="login-input" type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password" />
-      <div class="login-error" id="loginError"></div>
-      <button class="login-btn" id="btnLogin">Entrar</button>
-      <button class="login-link-btn" id="btnGoRegister">¿Primera vez? Crear cuenta</button>
-      <button class="login-link-btn muted" id="btnForgotPassword">¿Olvidaste la contraseña?</button>
+  <!-- HERO VERDE -->
+  <div class="ls-hero">
+    <div class="ls-hero-deco">
+      <div class="ls-blob"></div>
+      <svg class="ls-leaf ls-leaf-1" width="90" height="110" viewBox="0 0 90 110" fill="none">
+        <path d="M45 5 C20 20, 5 50, 15 80 C25 105, 55 108, 70 85 C85 62, 80 25, 45 5Z" fill="#d4f56b" opacity=".18"/>
+      </svg>
+      <svg class="ls-leaf ls-leaf-2" width="60" height="75" viewBox="0 0 60 75" fill="none">
+        <path d="M30 3 C12 14, 3 35, 10 55 C17 72, 40 74, 52 58 C62 42, 56 16, 30 3Z" fill="#d4f56b" opacity=".10"/>
+      </svg>
+      <svg class="ls-leaf ls-leaf-3" width="50" height="62" viewBox="0 0 50 62" fill="none">
+        <path d="M25 2 C10 12, 2 30, 8 46 C14 60, 34 62, 44 48 C53 35, 46 13, 25 2Z" fill="#d4f56b" opacity=".20"/>
+      </svg>
     </div>
-  </div>
 
-  <!-- Paso 2: Registro -->
-  <div class="login-step" id="loginStep2">
-    <div class="login-sub" style="margin-bottom:24px">Crea tu cuenta</div>
-    <div class="login-form">
-      <input class="login-input" type="text" id="regNombre" placeholder="Tu nombre" autocomplete="given-name" />
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t500);margin-bottom:8px;text-align:center">Elige tu color</div>
-        <div class="color-picker" id="regColorPicker"></div>
+    <div class="ls-brand">
+      <div class="ls-brand-box">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M11 2C6 2 2 7 3 13C4 18 8 20 11 20C14 20 18 18 19 13C20 7 16 2 11 2Z" fill="#053722"/>
+          <path d="M11 20V10M11 10C11 10 7 7 5 9M11 10C11 10 15 7 17 9" stroke="#d4f56b" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
       </div>
-      <input class="login-input" type="email" id="regEmail" placeholder="Tu email" autocomplete="email" />
-      <input class="login-input" type="password" id="regPassword" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password" />
-      <div class="login-error" id="regError"></div>
-      <button class="login-btn" id="btnRegister">Crear cuenta</button>
-      <button class="login-link-btn" id="btnGoLogin">¿Ya tienes cuenta? Entrar</button>
+      <span class="ls-brand-name">Hogar</span>
     </div>
+
+    <div class="ls-eyebrow">
+      <div class="ls-pulse"></div>
+      Vuestra familia, vuestra cuenta
+    </div>
+
+    <div class="ls-h1">Vamos a <em>cuidar</em><br>la cuenta juntos.</div>
+    <div class="ls-sub">Sin hojas de cálculo. Sin discusiones a fin de mes.</div>
   </div>
 
-  <!-- Paso 3: Configurar familia (usuarios nuevos) -->
-  <div class="login-step" id="loginStep3">
-    <div id="familySetupContent"></div>
+  <!-- FORMULARIO -->
+  <div class="ls-form-wrap">
+
+    <!-- Banner invitación -->
+    <div class="ls-invite-banner" id="inviteBanner">
+      <div class="ls-invite-title" id="inviteBannerTitle">Te han invitado</div>
+      <div class="ls-invite-sub">Entra o crea tu cuenta para unirte</div>
+    </div>
+
+    <!-- PASO 1: Login -->
+    <div class="ls-step active" id="loginStep1">
+      <div class="ls-form-eyebrow">Bienvenida de nuevo</div>
+      <div class="ls-h2">¡Qué bien que <span class="ls-h2-highlight">vuelves</span>!</div>
+      <div class="ls-motivation" id="lsMotivation"></div>
+
+      <div class="ls-input-wrap">
+        <input class="ls-input" type="email" id="loginEmail"
+               placeholder="Tu email" autocomplete="email" />
+        <span class="ls-input-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="3" width="14" height="10" rx="2" stroke="#888" stroke-width="1.4"/>
+            <path d="M1 5.5L8 9.5L15 5.5" stroke="#888" stroke-width="1.4"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="ls-input-wrap">
+        <input class="ls-input pw" type="password" id="loginPassword"
+               placeholder="Contraseña" autocomplete="current-password" />
+        <button class="ls-toggle-pw" type="button" id="togglePw"
+                onclick="(function(){const i=document.getElementById('loginPassword');const b=document.getElementById('togglePw');if(i.type==='password'){i.type='text';b.textContent='Ocultar';}else{i.type='password';b.textContent='Mostrar';}})()">
+          Mostrar
+        </button>
+      </div>
+
+      <div class="ls-row">
+        <label class="ls-remember">
+          <div class="ls-checkbox checked" id="rememberBox"
+               onclick="this.classList.toggle('checked')">
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          Recordarme
+        </label>
+        <button class="ls-forgot" id="btnForgotPassword">¿Olvidaste tu contraseña?</button>
+      </div>
+
+      <div class="ls-error" id="loginError"></div>
+
+      <button class="ls-btn" id="btnLogin">
+        Entrar a casa
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="ls-divider">o</div>
+      <button class="ls-alt" id="btnGoRegister">¿Primera vez? Crea vuestra cuenta familiar</button>
+      <div class="ls-footer">Hecho con <span>♥</span> para familias que ahorran juntas</div>
+    </div>
+
+    <!-- PASO 2: Registro -->
+    <div class="ls-step" id="loginStep2">
+      <div class="ls-form-eyebrow">Nueva cuenta</div>
+      <div class="ls-h2">Empieza a <span class="ls-h2-highlight">ahorrar</span></div>
+
+      <div class="ls-input-wrap">
+        <input class="ls-input" type="text" id="regNombre"
+               placeholder="Tu nombre" autocomplete="given-name" />
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:10px;text-align:center">Elige tu color</div>
+        <div class="ls-colors" id="regColorPicker"></div>
+      </div>
+
+      <div class="ls-input-wrap">
+        <input class="ls-input" type="email" id="regEmail"
+               placeholder="Tu email" autocomplete="email" />
+        <span class="ls-input-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="3" width="14" height="10" rx="2" stroke="#888" stroke-width="1.4"/>
+            <path d="M1 5.5L8 9.5L15 5.5" stroke="#888" stroke-width="1.4"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="ls-input-wrap">
+        <input class="ls-input pw" type="password" id="regPassword"
+               placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password" />
+        <button class="ls-toggle-pw" type="button"
+                onclick="(function(){const i=document.getElementById('regPassword');const b=event.target;if(i.type==='password'){i.type='text';b.textContent='Ocultar';}else{i.type='password';b.textContent='Mostrar';}})()">
+          Mostrar
+        </button>
+      </div>
+
+      <div class="ls-error" id="regError"></div>
+
+      <button class="ls-btn" id="btnRegister">
+        Crear cuenta familiar
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="ls-divider">o</div>
+      <button class="ls-alt" id="btnGoLogin">¿Ya tienes cuenta? Entrar</button>
+      <div class="ls-footer">Hecho con <span>♥</span> para familias que ahorran juntas</div>
+    </div>
+
+    <!-- PASO 3: Configurar familia -->
+    <div class="ls-step" id="loginStep3">
+      <div id="familySetupContent"></div>
+    </div>
+
   </div>
 </div>
+
+<script>
+(function() {
+  const frases = [
+    "Hoy es un buen día para acercaros a vuestra <strong>meta</strong>.",
+    "Cada gasto registrado es un paso más hacia <strong>ahorrar</strong>.",
+    "Pequeñas elecciones, grandes <strong>cambios</strong> a fin de mes.",
+    "Cuidar la cuenta es cuidar de la <strong>familia</strong>.",
+    "Ahorrar también es regalaros <strong>tranquilidad</strong>.",
+    "Lo que no se mide, no se <strong>mejora</strong>. Vamos allá.",
+    "Un mes ordenado se nota en <strong>todo</strong>."
+  ];
+  const el = document.getElementById('lsMotivation');
+  if (el) el.innerHTML = frases[Math.floor(Math.random() * frases.length)];
+})();
+</script>
 
 <!-- LOADING -->
 <div class="loading-screen" id="loadingScreen">
@@ -1764,7 +2124,7 @@ function renderFamilia() {
           </div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t500);margin-bottom:8px">Tu color</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${MEMBER_COLORS.map(c=>`<div class="color-swatch ${c===authState.currentUser.color?'selected':''}" style="background:${c};width:28px;height:28px" data-action="change-my-color" data-color="${c}"></div>`).join('')}
+            ${MEMBER_COLORS.map(c=>`<div class="ls-color-swatch ${c===authState.currentUser.color?'selected':''}" style="background:${c};width:28px;height:28px" data-action="change-my-color" data-color="${c}"></div>`).join('')}
           </div>
         </div>` : ''}
     </div>
@@ -2997,7 +3357,7 @@ function renderColorPicker(selectedColor) {
   const el = document.getElementById('regColorPicker');
   if (!el) return;
   el.innerHTML = MEMBER_COLORS.map((c, i) => `
-    <div class="color-swatch ${c === selectedColor ? 'selected' : ''}"
+    <div class="ls-color-swatch ${c === selectedColor ? 'selected' : ''}"
          style="background:${c}" data-color="${c}"></div>
   `).join('');
 }
@@ -3011,7 +3371,7 @@ function initAuth() {
     const sw = e.target.closest('[data-color]');
     if (!sw) return;
     selectedColor = sw.dataset.color;
-    document.querySelectorAll('#regColorPicker .color-swatch').forEach(s => s.classList.remove('selected'));
+    document.querySelectorAll('#regColorPicker .ls-color-swatch').forEach(s => s.classList.remove('selected'));
     sw.classList.add('selected');
   });
 
@@ -3186,13 +3546,11 @@ function showFamilySetup(uid, nombre, color) {
 
   if (authState.inviteToken) {
     container.innerHTML = `
-      <div class="login-sub" style="margin-bottom:24px">Tienes una invitación</div>
-      <div class="login-form">
-        <div style="font-size:13px;color:var(--t500);text-align:center;margin-bottom:20px" id="inviteInfo">Cargando...</div>
-        <div class="login-error" id="famError"></div>
-        <button class="login-btn" id="btnAceptarInvite">Unirse a la familia</button>
-        <button class="login-link-btn muted" id="btnRechazarInvite">Crear mi propia familia</button>
-      </div>`;
+      <div class="ls-form-eyebrow" style="margin-bottom:8px">Tienes una invitación</div>
+      <div style="font-size:13px;color:#555;text-align:center;margin-bottom:20px" id="inviteInfo">Cargando...</div>
+      <div class="ls-error" id="famError"></div>
+      <button class="ls-btn" id="btnAceptarInvite">Unirse a la familia</button>
+      <button class="ls-alt" style="font-weight:400;color:#888;font-size:13px" id="btnRechazarInvite">Crear mi propia familia</button>`;
     loadInviteInfo(authState.inviteToken).then(inv => {
       const info = document.getElementById('inviteInfo');
       if (info) info.textContent = inv
@@ -3207,15 +3565,15 @@ function showFamilySetup(uid, nombre, color) {
     });
   } else {
     container.innerHTML = `
-      <div class="login-sub" style="margin-bottom:24px">Crea tu familia</div>
-      <div class="login-form">
-        <div style="font-size:13px;color:var(--t500);text-align:center;margin-bottom:14px;line-height:1.5">
-          Ponle un nombre. Después podrás invitar a quien quieras.
-        </div>
-        <input class="login-input" type="text" id="famNombre" placeholder="Ej: Los García" />
-        <div class="login-error" id="famError"></div>
-        <button class="login-btn" id="btnCrearFamilia">Crear mi familia</button>
-      </div>`;
+      <div class="ls-form-eyebrow" style="margin-bottom:8px">Crea tu familia</div>
+      <div style="font-size:13px;color:#555;text-align:center;margin-bottom:14px;line-height:1.5">
+        Ponle un nombre. Después podrás invitar a quien quieras.
+      </div>
+      <div class="ls-input-wrap">
+        <input class="ls-input" type="text" id="famNombre" placeholder="Ej: Los García" />
+      </div>
+      <div class="ls-error" id="famError"></div>
+      <button class="ls-btn" id="btnCrearFamilia">Crear mi familia</button>`;
     document.getElementById('btnCrearFamilia')?.addEventListener('click', () => crearFamilia(uid, nombre, color));
     document.getElementById('famNombre')?.addEventListener('keydown', e => { if (e.key === 'Enter') crearFamilia(uid, nombre, color); });
   }
