@@ -906,6 +906,24 @@
   </div>
 </div>
 
+<!-- EDITAR NOMBRE OVERLAY -->
+<div class="overlay" id="editNombreOverlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-header">
+      <span style="font-size:17px;font-weight:700">Editar tu nombre</span>
+      <button class="btn btn-cream btn-xs" id="closeEditNombre">✕</button>
+    </div>
+    <div class="form-sec">
+      <label class="form-lbl">Tu nombre</label>
+      <input class="form-in" type="text" placeholder="Ej: María" id="inEditNombre" maxlength="40" />
+    </div>
+    <div class="form-sec">
+      <button class="btn btn-green btn-w100" style="border-radius:16px;padding:15px" id="saveEditNombreBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 // FIREBASE
@@ -2149,9 +2167,12 @@ function renderFamilia() {
         <div style="background:var(--cream);border-radius:16px;padding:14px 16px;margin-top:6px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
             <div style="width:36px;height:36px;border-radius:50%;background:${authState.currentUser.color};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0">${authState.currentUser.id}</div>
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700">${authState.currentUser.nombre}</div>
-              <div style="font-size:11px;color:var(--t500)">${authState.currentUser.email || 'Sesión activa'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:14px;font-weight:700">${escH(authState.currentUser.nombre)}</span>
+                <button class="btn btn-cream btn-xs" data-action="edit-my-nombre" style="padding:2px 7px;font-size:12px;border-radius:8px;line-height:1.4">✏️</button>
+              </div>
+              <div style="font-size:11px;color:var(--t500)">${escH(authState.currentUser.email || 'Sesión activa')}</div>
             </div>
             <button class="btn btn-cream btn-xs" data-action="logout" style="color:var(--coral)">Salir</button>
           </div>
@@ -3055,6 +3076,7 @@ document.addEventListener('click', e=>{
   if(act==='add-meta')  { openEditMetaSheet(null); return; }
   if(act==='edit-meta') { openEditMetaSheet(btn.dataset.id); return; }
   if(act==='invite-miembro') { openInviteSheet(); return; }
+  if(act==='edit-my-nombre') { openEditNombre(); return; }
   if(act==='change-my-color') {
     const newColor = btn.dataset.color;
     if (!newColor || !authState.currentUser) return;
@@ -3744,6 +3766,44 @@ async function openInviteSheet() {
     }, { once: true });
   } catch(e) { linkBox.textContent = 'Error al generar el enlace. Inténtalo de nuevo.'; }
 }
+
+// ══════════════════════════════════════════════
+// EDITAR NOMBRE DE PERFIL
+// ══════════════════════════════════════════════
+function openEditNombre() {
+  if (!authState.currentUser) return;
+  document.getElementById('inEditNombre').value = authState.currentUser.nombre || '';
+  document.getElementById('editNombreOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('inEditNombre').focus(), 100);
+}
+function closeEditNombre() {
+  document.getElementById('editNombreOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('closeEditNombre').addEventListener('click', closeEditNombre);
+document.getElementById('editNombreOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('editNombreOverlay')) closeEditNombre();
+});
+document.getElementById('saveEditNombreBtn').addEventListener('click', () => {
+  const nuevoNombre = document.getElementById('inEditNombre').value.trim();
+  if (!nuevoNombre || !authState.currentUser) return;
+  authState.currentUser.nombre = nuevoNombre;
+  const miembro = S.miembros.find(m => m.id === authState.currentUser.id);
+  if (miembro) miembro.nombre = nuevoNombre;
+  if (authState.familia?.miembros?.[authState.currentUser.uid]) {
+    authState.familia.miembros[authState.currentUser.uid].nombre = nuevoNombre;
+  }
+  if (USE_FIREBASE && authState.currentUser.uid) {
+    DB.collection('users').doc(authState.currentUser.uid).update({ nombre: nuevoNombre }).catch(console.error);
+    if (familiaDocRef) {
+      const upd = {}; upd[`miembros.${authState.currentUser.uid}.nombre`] = nuevoNombre;
+      familiaDocRef.update(upd).catch(console.error);
+    }
+  }
+  closeEditNombre();
+  render();
+});
 
 function hideLoginScreen() {
   const ls = document.getElementById('loginScreen');

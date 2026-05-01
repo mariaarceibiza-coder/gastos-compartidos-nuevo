@@ -21,9 +21,11 @@ service cloud.firestore {
 
       // Actualizar familia: solo el admin (ownerId) puede cambiar miembros y nombre.
       // Excepción: un miembro puede añadirse a sí mismo al aceptar una invitación.
+      // Excepción: un miembro puede actualizar su propio nombre y color.
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.ownerId ||
-        onlyAddingSelf(resource, request)
+        onlyAddingSelf(resource, request) ||
+        onlyUpdatingOwnProfile(resource, request)
       );
 
       // Datos financieros: solo miembros de la familia
@@ -58,6 +60,16 @@ service cloud.firestore {
       let newKeys      = request.resource.data.miembros.keys();
       return newKeys.hasAll(existingKeys) &&
              newKeys.removeAll(existingKeys).hasOnly([request.auth.uid]);
+    }
+
+    function onlyUpdatingOwnProfile(resource, request) {
+      // Permite que un miembro actualice solo su propio nombre y color
+      let uid = request.auth.uid;
+      let dataDiff = request.resource.data.diff(resource.data);
+      return uid in resource.data.miembros &&
+             dataDiff.affectedKeys().hasOnly(['miembros']) &&
+             request.resource.data.miembros.diff(resource.data.miembros).affectedKeys().hasOnly([uid]) &&
+             request.resource.data.miembros[uid].diff(resource.data.miembros[uid]).affectedKeys().hasOnly(['nombre', 'color']);
     }
   }
 }
