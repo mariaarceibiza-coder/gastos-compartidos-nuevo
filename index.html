@@ -952,6 +952,9 @@ try {
 } catch(e) { console.warn('Firebase no disponible, usando localStorage', e); }
 function lsLoad() { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null; } catch(e){return null;} }
 function lsSave(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e){} }
+function lsPersonalKey(uid) { return `hogar_personal_${uid}`; }
+function lsPersonalLoad(uid) { try { const r=localStorage.getItem(lsPersonalKey(uid)); return r?JSON.parse(r):null; } catch(e){return null;} }
+function lsPersonalSave(uid, d) { try { localStorage.setItem(lsPersonalKey(uid), JSON.stringify(d)); } catch(e){} }
 
 // ══════════════════════════════════════════════
 // CONSTANTS
@@ -1178,38 +1181,50 @@ function schedulePersonalSave() {
 }
 
 async function savePersonalData() {
+  const uid = authState.currentUser?.uid;
+  const payload = {
+    ingresosPropios: Number(SP.ingresosPropios) || 0,
+    aportacionComun: Number(SP.aportacionComun) || 0,
+    ahorroPersonal:  Number(SP.ahorroPersonal)  || 0,
+    pagosAplazados:  SP.pagosAplazados,
+    gastosPersonales: SP.gastosPersonales,
+    pendientesCobro: SP.pendientesCobro,
+    metasPersonales: SP.metasPersonales,
+    historico: SP.historico || {}
+  };
+  if (uid) lsPersonalSave(uid, payload);
   if (!USE_FIREBASE || !personalRef) return;
   try {
-    await personalRef.set({
-      ingresosPropios: Number(SP.ingresosPropios) || 0,
-      aportacionComun: Number(SP.aportacionComun) || 0,
-      ahorroPersonal:  Number(SP.ahorroPersonal)  || 0,
-      pagosAplazados:  SP.pagosAplazados,
-      gastosPersonales: SP.gastosPersonales,
-      pendientesCobro: SP.pendientesCobro,
-      metasPersonales: SP.metasPersonales,
-      historico: SP.historico || {},
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    await personalRef.set({ ...payload, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
   } catch(e) { console.error('Error guardando datos personales:', e); }
 }
 
+function applyPersonalData(d) {
+  if (!d) return;
+  if (typeof d.ingresosPropios === 'number') SP.ingresosPropios = d.ingresosPropios;
+  if (typeof d.aportacionComun === 'number') SP.aportacionComun = d.aportacionComun;
+  if (typeof d.ahorroPersonal  === 'number') SP.ahorroPersonal  = d.ahorroPersonal;
+  if (Array.isArray(d.pagosAplazados))  SP.pagosAplazados  = d.pagosAplazados;
+  if (Array.isArray(d.gastosPersonales)) SP.gastosPersonales = d.gastosPersonales;
+  if (Array.isArray(d.pendientesCobro))  SP.pendientesCobro  = d.pendientesCobro;
+  if (Array.isArray(d.metasPersonales))  SP.metasPersonales  = d.metasPersonales;
+  if (d.historico && typeof d.historico === 'object') SP.historico = d.historico;
+}
+
 async function loadPersonalData() {
-  if (!USE_FIREBASE || !DB || !authState.currentUser?.uid) return;
-  const uid = authState.currentUser.uid;
+  const uid = authState.currentUser?.uid;
+  if (!uid) return;
+
+  const cached = lsPersonalLoad(uid);
+  if (cached) { applyPersonalData(cached); if (UI.tab === 'yo') renderTab('yo'); }
+
+  if (!USE_FIREBASE || !DB) return;
   personalRef = DB.collection('usuarios').doc(uid).collection('personal').doc('datos');
   try {
     const snap = await personalRef.get();
     if (snap.exists) {
-      const d = snap.data();
-      if (typeof d.ingresosPropios === 'number') SP.ingresosPropios = d.ingresosPropios;
-      if (typeof d.aportacionComun === 'number') SP.aportacionComun = d.aportacionComun;
-      if (typeof d.ahorroPersonal  === 'number') SP.ahorroPersonal  = d.ahorroPersonal;
-      if (Array.isArray(d.pagosAplazados))  SP.pagosAplazados  = d.pagosAplazados;
-      if (Array.isArray(d.gastosPersonales)) SP.gastosPersonales = d.gastosPersonales;
-      if (Array.isArray(d.pendientesCobro))  SP.pendientesCobro  = d.pendientesCobro;
-      if (Array.isArray(d.metasPersonales))  SP.metasPersonales  = d.metasPersonales;
-      if (d.historico && typeof d.historico === 'object') SP.historico = d.historico;
+      applyPersonalData(snap.data());
+      lsPersonalSave(uid, snap.data());
     }
     if (UI.tab === 'yo') renderTab('yo');
   } catch(e) { console.error('Error cargando datos personales:', e); }
@@ -3604,7 +3619,7 @@ async function loadFamiliaAndStart(familiaId, uid) {
     loadPersonalData();
   } catch(e) {
     console.error('Error cargando familia:', e);
-    hideLoginScreen(); startRealtime();
+    hideLoginScreen(); startRealtime(); loadPersonalData();
   }
 }
 
