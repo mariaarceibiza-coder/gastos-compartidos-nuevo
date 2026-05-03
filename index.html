@@ -1692,6 +1692,57 @@ function renderHome() {
       : `<div style="font-size:12px;color:var(--t500)">Semana completada</div>`}
     </div>
 
+    <!-- COACH: OBJETIVO DE AHORRO -->
+    ${(() => {
+      const ahorroPlaneado = S.gastosFijos.find(g =>
+        g.categoria.toLowerCase().includes('ahorro'))?.presupuesto || 0;
+      const ahorroExtraMax = Math.max(0, b.presVars - b.vars - ahorroPlaneado);
+      const objetivoSugerido = Math.round(ahorroExtraMax * 0.8 / 5) * 5;
+      const limiteParaObjetivo = b.diasR > 0
+        ? Math.round((b.presVars - b.vars - objetivoSugerido) / b.diasR)
+        : 0;
+      const estado = b.pctSem >= 80 ? 'warn' : 'bien';
+
+      if (!(objetivoSugerido > 0 && b.diasR > 0)) return '';
+
+      const isWarn = estado === 'warn';
+      const borderColor  = isWarn ? '#D97706' : '#246B3E';
+      const dotColor     = isWarn ? '#D97706' : '#246B3E';
+      const overlineClr  = isWarn ? '#D97706' : '#246B3E';
+      const boxBg        = isWarn ? '#FFFBEB' : '#F0FBF5';
+      const numColor     = isWarn ? '#D97706' : '#246B3E';
+      const subColor     = isWarn ? '#92400E' : '#246B3E';
+      const dividerColor = isWarn ? '#D97706' : '#246B3E';
+
+      const xMax = Math.round(ahorroExtraMax / 5) * 5;
+      const textoDesc = isWarn
+        ? `El gasto de esta semana ha reducido el margen. El objetivo se ajusta a lo que sigue siendo alcanzable.`
+        : `A vuestro ritmo podéis ahorrar hasta ${xMax} € extra este mes. Si os mantenéis en el límite de abajo, lo conseguís sin esfuerzo.`;
+
+      return `
+        <div class="card" style="border-left:3px solid ${borderColor}">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <div style="width:7px;height:7px;border-radius:50%;background:${dotColor};flex-shrink:0"></div>
+            <div class="overline" style="color:${overlineClr}">COACH · OBJETIVO DEL MES</div>
+          </div>
+          <p style="font-size:13px;color:var(--t700);margin:0 0 12px 0;line-height:1.5">${textoDesc}</p>
+          <div style="background:${boxBg};border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center">
+            <div>
+              <div class="overline" style="color:${overlineClr};margin-bottom:4px">PODÉIS AHORRAR</div>
+              <div style="font-family:'Instrument Serif',Georgia,serif;font-size:30px;font-weight:800;color:${numColor};line-height:1">${objetivoSugerido} €</div>
+              <div style="font-size:11px;color:${subColor};margin-top:3px">extra este mes</div>
+            </div>
+            <div style="width:1px;background:${dividerColor};opacity:0.2;align-self:stretch;margin:0 14px"></div>
+            <div>
+              <div class="overline" style="color:${overlineClr};margin-bottom:4px">VUESTRO LÍMITE</div>
+              <div style="font-family:'Instrument Serif',Georgia,serif;font-size:30px;font-weight:800;color:${numColor};line-height:1">${limiteParaObjetivo} €</div>
+              <div style="font-size:11px;color:${subColor};margin-top:3px">al día · ${b.diasR} días</div>
+            </div>
+          </div>
+        </div>
+      `;
+    })()}
+
     <!-- METAS -->
     ${S.metas.length>0 ? `
       <div class="sec-divider"><div class="sec-title">Metas de ahorro</div><div class="sec-action" data-go="metas">Ver todas →</div></div>
